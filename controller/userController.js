@@ -1,4 +1,3 @@
-const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const userService = require("../services/userService");
@@ -25,7 +24,7 @@ exports.login = async (req, res) => {
         res.status(200).json({  
             success: true,
             message: "User logged in successfully",
-            data: result
+            data: result.token
         });
     } catch (err) {
         res.status(500).json({
@@ -53,10 +52,8 @@ exports.getProfile = async (req, res) => {
 
 exports.logout = async (req, res) => {
     try {
-        
         const token = req.headers.authorization?.split(" ")[1];
         const logoutResult = await userService.logout(token);
-        // Invalidate token logic can be implemented here (e.g., using a blacklist) 
         res.status(200).json({
             success: true,
             message: "User logged out successfully"
