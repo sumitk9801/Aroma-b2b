@@ -18,5 +18,13 @@ const auth = async (req, res, next) => {
         res.status(401).json({ message: "Invalid token" });
     }
 };
+const authorize = (roles) => {
+    return (req, res, next) => {
+        if ("customer"== req.user.role) {
+            return res.status(403).json({ message: "Forbidden: You don't have permission to access this resource" });
+        }
+        next();
+    };
+};
 
 module.exports = auth;
