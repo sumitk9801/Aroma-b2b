@@ -8,6 +8,15 @@ const productSchema = new mongoose.Schema({
     description: {
         type: String,
     },
+    image:{
+        image_Url:{
+                type: String,
+        },
+        public_id:{
+            type: String,  
+        }
+    },
+    
     skuCode:{
         type: String,
         required: true,
