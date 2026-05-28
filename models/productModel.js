@@ -1,4 +1,4 @@
-const monogoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
     name: {
@@ -9,11 +9,13 @@ const productSchema = new mongoose.Schema({
         type: String,
     },
     image:{
-        image_Url:{
-                type: String,
+        imageUrl:{
+            type: String,
+            required: true
         },
         public_id:{
-            type: String,  
+            type: String,
+            required: true
         }
     },
     

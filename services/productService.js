@@ -1,11 +1,14 @@
 const Product = require('../models/productModel');
-const cloudinary = require('../utils/cloudinaryConfig');
+const cloudinary = require('../config/cloudinary');
 
 const addProduct=async(productData,productImage)=>{
-    const {name, description,skuCode,pricePerKg,currentStock,minimunStock} = productData;
     try{
-        if(!name || !skuCode || !pricePerKg || !currentStock || !minimunStock){
+        const { name, description, skuCode, category, pricePerKg, currentStock, minimunStock } = productData || {};
+        if(!name || !skuCode || !category || pricePerKg == null || currentStock == null){
             return { success: false, message: "Missing required fields" };
+        }
+        if(!productImage){
+            return { success: false, message: "Product image is required" };
         }
         const b64 = Buffer.from(productImage.buffer).toString('base64');
         const dataURI = `data:${productImage.mimetype};base64,${b64}`;
@@ -13,14 +16,17 @@ const addProduct=async(productData,productImage)=>{
             folder: "products"
         });
         const newProduct = new Product({
-            name: productData.name,
-            description: productData.description,
-            imageUrl: uploadedImage.secure_url,
-            public_id: uploadedImage.public_id,
-            skuCode: productData.skuCode,
-            pricePerKg: productData.pricePerKg,
-            currentStock: productData.currentStock,
-            minimunStock: productData.minimunStock
+            name,
+            description,
+            image:{
+                imageUrl: uploadedImage.secure_url,
+                public_id: uploadedImage.public_id
+            },
+            skuCode,
+            category,
+            pricePerKg,
+            currentStock,
+            minimunStock
         });
         const savedProduct = await newProduct.save();
         return { success: true, data: savedProduct };
@@ -43,7 +49,7 @@ const getProducts = async()=>{
 }
 const getProductById = async(skuCode)=>{
     try{
-        const product = await Product.findOne({ skuCode }).select("-public_id");
+        const product = await Product.findOne({ skuCode }).select("-image.public_id -__v");
         if(!product){
             return { success: false, message: "Product not found" };
         }
@@ -58,7 +64,7 @@ const getProductByName = async(searchedName)=>{
         const product = await Product.findOne({ name: {
             $regex: searchedName,
             $options: "i"
-        } }).select("-public_id");
+        } }).select("-image.public_id -__v");
         if(!product){
             return { success: false, message: "Product not found" };
         }
@@ -67,4 +73,10 @@ const getProductByName = async(searchedName)=>{
     catch(error){
         return { success: false, message: "Failed to retrieve product" };
     }
+}
+module.exports = {
+    addProduct,
+    getProducts,    
+    getProductById,
+    getProductByName
 }

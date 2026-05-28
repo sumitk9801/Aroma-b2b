@@ -1,13 +1,13 @@
-let totalProducts = 0;
+const productService = require("../services/productService");
+
 const addProduct = async(req,res)=>{
     try{
         const result = await productService.addProduct(req.body,req.file);
         if(result.success){
-            totalProducts++;
             res.status(201).json({
                 success: true,
                 message: "Product added successfully",
-                data: result
+                data: result.data
             });
         }
         else{
@@ -27,17 +27,17 @@ const addProduct = async(req,res)=>{
 }
 const getProducts = async(req,res)=>{
     try{
-        if(totalProducts === 0){
+        const result = await productService.getProducts();
+        if(!result.success){
             return res.status(404).json({
                 success: false,
-                message: "No products found"
+                message: result.message
             });
         }
-        const result = await productService.getProducts();
         res.status(200).json({
             success: true,
             message: "Products retrieved successfully", 
-            data: result
+            data: result.data
         });
     }
     catch(error){
@@ -55,7 +55,7 @@ const getProductById = async(req,res)=>{
             res.status(200).json({
                 success: true,
                 message: "Product retrieved successfully", 
-                data: result
+                data: result.data
             });
         }
         else{
@@ -72,10 +72,13 @@ const getProductById = async(req,res)=>{
         });
     }
 }
-const getProductByName = async(req,res)=>{
+const getProductName = async(req,res)=>{
     const {searchedName} = req.body;
     if(!searchedName){
-        return [];
+        return res.status(400).json({
+            success: false,
+            message: "Search name is required"
+        });
     }
     try{
         const result = await productService.getProductByName(searchedName);
@@ -83,7 +86,7 @@ const getProductByName = async(req,res)=>{
             res.status(200).json({
                 success: true,
                 message: "Product retrieved successfully",
-                data: result
+                data: result.data
             });
         }
         else{
@@ -101,4 +104,4 @@ const getProductByName = async(req,res)=>{
     }
 }
 
-module.exports = { addProduct, getProducts, getProductById, getProductByName    }; 
+module.exports = { addProduct, getProducts, getProductById, getProductName };
