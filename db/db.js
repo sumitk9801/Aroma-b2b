@@ -1,14 +1,23 @@
-const mongoose = require('mongoose');
+const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
+const { Pool } = require('pg');
 const dotenv = require('dotenv');
 dotenv.config();
 
+const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/aroma_b2b";
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
 const connectdb = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URL|| "mongodb://localhost:27017/aroma-b2b");
+        await prisma.$connect();
         console.log("Database connected successfully");
     } catch (err) {
-        console.log(err.message);
+        console.log("Database connection failed:", err.message);
     }
 }
 
 module.exports = connectdb;
+module.exports.prisma = prisma;
+

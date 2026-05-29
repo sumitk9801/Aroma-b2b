@@ -1,0 +1,146 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String          @id @default(uuid())
+  name             String
+  email            String          @unique
+  password         String
+  role             String          @default("customer")
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  shops            Shop[]          @relation("UserShops")
+  purchases        Purchase[]      @relation("UserPurchases")
+  sales            Sale[]          @relation("UserSales")
+  stockAdjustments StockMovement[] @relation("UserStockMovements")
+}
+
+model BlackList {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expireAt  DateTime
+}
+
+model Shop {
+  id               String          @id @default(uuid())
+  ownerId          String
+  owner            User            @relation("UserShops", fields: [ownerId], references: [id], onDelete: Cascade)
+  shopName         String
+  businessType     String?
+  address          String?
+  phone            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  categories       Category[]
+  products         Product[]
+  purchases        Purchase[]
+  sales            Sale[]
+  stockAdjustments StockMovement[]
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  image     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id               String          @id @default(uuid())
+  shopId           String
+  shop             Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  categoryId       String
+  categoryRef      Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  skuCode          String          @unique
+  barcodes         String?
+  image            Json?
+  purchasePrice    Float           @default(0.00)
+  sellingPrice     Float           @default(0.00)
+  currentStock     Float           @default(0.00)
+  minimumStock     Float           @default(5.00)
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  purchaseItems    PurchaseItem[]
+  saleItems        SaleItem[]
+  stockAdjustments StockMovement[]
+}
+
+model Purchase {
+  id           String         @id @default(uuid())
+  shopId       String
+  shop         Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  supplierName String?
+  totalAmount  Float          @default(0.00)
+  createdBy    String
+  creator      User           @relation("UserPurchases", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  items        PurchaseItem[]
+}
+
+model PurchaseItem {
+  id            String   @id @default(uuid())
+  purchaseId    String
+  purchase      Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity      Float
+  purchasePrice Float
+  subtotal      Float
+}
+
+model Sale {
+  id            String     @id @default(uuid())
+  shopId        String
+  shop          Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerName  String?
+  totalAmount   Float      @default(0.00)
+  paymentMethod String?
+  createdBy     String
+  creator       User       @relation("UserSales", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  items         SaleItem[]
+}
+
+model SaleItem {
+  id           String   @id @default(uuid())
+  saleId       String
+  sale         Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity     Float
+  sellingPrice Float
+  subtotal     Float
+}
+
+model StockMovement {
+  id            String   @id @default(uuid())
+  shopId        String
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type          String
+  quantity      Float
+  previousStock Float
+  newStock      Float
+  referenceType String?
+  referenceId   String?
+  note          String?
+  createdBy     String
+  creator       User     @relation("UserStockMovements", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+}

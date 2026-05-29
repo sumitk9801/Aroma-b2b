@@ -7,7 +7,7 @@ const auth = async (req, res, next) => {
         if (!token) {
             return res.status(401).json({ message: "No token provided" });
         }
-        const isBlackListed = await BlackList.findOne({ token });
+        const isBlackListed = await BlackList.findUnique({ where: { token } });
         if (isBlackListed) {
             return res.status(401).json({ message: "Token is blacklisted" });
         }
@@ -24,4 +24,4 @@ const authorize = (req,res,next)=>{
     }
     next();
 };
-module.exports = { auth, authorize };
+module.exports = { auth, authorize };
