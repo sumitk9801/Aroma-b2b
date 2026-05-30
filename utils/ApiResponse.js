@@ -1,0 +1,15 @@
+/**
+ * Standardized successful API response wrapper class.
+ * Ensures consistent structural shapes for all successful response payloads.
+ */
+class ApiResponse {
+    constructor(statusCode, data, message = "Success") {
+        this.statusCode = statusCode;
+        this.success = statusCode < 400;
+        this.message = message;
+        this.data = data;
+    }
+}
+
+module.exports = ApiResponse;
+// For standard formatting, controllers and formatters construct this instance.
