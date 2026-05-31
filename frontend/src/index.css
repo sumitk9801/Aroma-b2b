@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+
+@theme {
+  --color-bg: #F6F6F5;
+  --color-navy: #1B1946;
+  --color-navyDeep: #11103A;
+  --color-gray: #9D9DA3;
+  --color-grayMid: #5B5A6E;
+  --color-grayLight: #717189;
+  --color-border: #B7B8C5;
+  --color-paleGreen: #DFF09F;
+  --color-softGreen: #CDF35E;
+  --color-lime: #C1F42F;
+  --color-neon: #B8ED23;
+
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  --shadow-card: 0 1px 3px rgba(27, 25, 70, 0.06), 0 1px 2px rgba(27, 25, 70, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(27, 25, 70, 0.1);
+  --shadow-dropdown: 0 8px 24px rgba(27, 25, 70, 0.12);
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-navy);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
+}
+
+.card-shadow {
+  box-shadow: 0 1px 3px rgba(27, 25, 70, 0.06), 0 1px 2px rgba(27, 25, 70, 0.04);
+}
+.card-shadow-hover {
+  box-shadow: 0 4px 12px rgba(27, 25, 70, 0.1);
+}
+
+/* Scrollbar styling */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #B7B8C5 transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #B7B8C5;
+  border-radius: 10px;
+}
+
+/* Input base */
+.input-base {
+  @apply bg-white border border-border rounded-xl px-4 py-2.5 text-navy placeholder:text-grayMid 
+         focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon/40 
+         transition-all duration-200 w-full text-sm;
+}
+
+/* Button variants */
+.btn-primary {
+  @apply bg-neon text-navyDeep font-semibold rounded-xl px-5 py-2.5 hover:bg-lime 
+         transition-colors duration-200 flex items-center gap-2 text-sm;
+}
+.btn-secondary {
+  @apply bg-white border border-border text-navy rounded-xl px-5 py-2.5 
+         hover:bg-paleGreen/60 transition-colors duration-200 flex items-center gap-2 text-sm;
+}
+.btn-danger {
+  @apply bg-red-50 text-red-600 border border-red-200 rounded-xl px-5 py-2.5 
+         hover:bg-red-100 transition-colors duration-200 flex items-center gap-2 text-sm;
+}
+
+/* Card */
+.card {
+  @apply bg-white rounded-2xl p-5 border border-border shadow-card;
+}
+
+/* Recharts tooltip override */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+/* Remove number input arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
