@@ -1,8 +1,32 @@
 const userService = require("../services/userService");
+const { prisma } = require("../db/db");
+
+/**
+ * Verify that the requesting admin owns the given shopId.
+ * Returns true if authorized, sends 403 response and returns false otherwise.
+ */
+const verifyShopOwnership = async (res, userId, shopId) => {
+    if (!shopId) {
+        res.status(400).json({ success: false, message: "shopId is required" });
+        return false;
+    }
+    const shop = await prisma.shop.findFirst({
+        where: { id: shopId, ownerId: userId }
+    });
+    if (!shop) {
+        res.status(403).json({ success: false, message: "You do not have access to this shop" });
+        return false;
+    }
+    return true;
+};
 
 const getUsers = async (req, res) => {
     try {
-        const users = await userService.getAllUsers();
+        const shopId = req.query.shopId;
+        const authorized = await verifyShopOwnership(res, req.user.id, shopId);
+        if (!authorized) return;
+
+        const users = await userService.getAllUsers(shopId);
         res.status(200).json({ success: true, data: users });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -20,6 +44,10 @@ const getUserById = async (req, res) => {
 
 const createUser = async (req, res) => {
     try {
+        const shopId = req.body.shopId;
+        const authorized = await verifyShopOwnership(res, req.user.id, shopId);
+        if (!authorized) return;
+
         const user = await userService.createUser(req.body);
         res.status(201).json({ success: true, data: user });
     } catch (err) {
@@ -38,8 +66,9 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
     try {
-        await userService.deleteUser(req.params.id);
-        res.status(200).json({ success: true, message: "User deleted successfully" });
+        const shopId = req.query.shopId || req.body.shopId;
+        await userService.deleteUser(req.params.id, shopId);
+        res.status(200).json({ success: true, message: "Staff member removed successfully" });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });
     }

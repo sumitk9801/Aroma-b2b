@@ -20,10 +20,14 @@ const loginSchema = z.object({
 // Shop schemas
 const createShopSchema = z.object({
     body: z.object({
-        shopName: z.string().min(2, "Shop name must be at least 2 characters"),
+        shopName: z.string().min(2, "Shop name must be at least 2 characters").optional(),
+        name: z.string().min(2, "Shop name must be at least 2 characters").optional(),
         businessType: z.string().optional(),
         address: z.string().optional(),
         phone: z.string().optional()
+    }).refine(data => data.shopName || data.name, {
+        message: "Shop name or name is required",
+        path: ["shopName"]
     })
 });
 
@@ -33,6 +37,7 @@ const updateShopSchema = z.object({
     }),
     body: z.object({
         shopName: z.string().min(2, "Shop name must be at least 2 characters").optional(),
+        name: z.string().min(2, "Shop name must be at least 2 characters").optional(),
         businessType: z.string().optional(),
         address: z.string().optional(),
         phone: z.string().optional()
@@ -44,7 +49,8 @@ const createCategorySchema = z.object({
     body: z.object({
         shopId: z.string().uuid("Invalid shop ID format"),
         name: z.string().min(1, "Category name is required"),
-        image: z.string().optional()
+        image: z.string().optional(),
+        imageUrl: z.string().optional()
     })
 });
 
@@ -60,7 +66,8 @@ const updateCategorySchema = z.object({
     }),
     body: z.object({
         name: z.string().min(1, "Category name is required").optional(),
-        image: z.string().optional()
+        image: z.string().optional(),
+        imageUrl: z.string().optional()
     })
 });
 
@@ -71,9 +78,10 @@ const createProductSchema = z.object({
         categoryId: z.string().uuid("Invalid category ID format"),
         name: z.string().min(1, "Product name is required"),
         description: z.string().optional(),
-        skuCode: z.string().min(1, "SKU code is required"),
+        skuCode: z.string().min(1, "SKU code is required").optional(),
         barcodes: z.string().optional(),
         image: z.any().optional(),
+        imageUrl: z.string().optional(),
         purchasePrice: z.number().nonnegative("Purchase price must be positive").optional(),
         sellingPrice: z.number().nonnegative("Selling price must be positive").optional(),
         currentStock: z.number().nonnegative("Current stock must be positive").optional(),
@@ -92,6 +100,7 @@ const updateProductSchema = z.object({
         skuCode: z.string().min(1, "SKU code must be at least 1 character").optional(),
         barcodes: z.string().optional(),
         image: z.any().optional(),
+        imageUrl: z.string().optional(),
         purchasePrice: z.number().nonnegative("Purchase price must be positive").optional(),
         sellingPrice: z.number().nonnegative("Selling price must be positive").optional(),
         currentStock: z.number().nonnegative("Current stock must be positive").optional(),
@@ -128,7 +137,11 @@ const createSaleSchema = z.object({
         items: z.array(z.object({
             productId: z.string().uuid("Invalid product ID format"),
             quantity: z.number().positive("Quantity must be positive"),
-            sellingPrice: z.number().positive("Selling price must be positive")
+            sellingPrice: z.number().positive("Selling price must be positive").optional(),
+            unitPrice: z.number().positive("Unit price must be positive").optional()
+        }).refine(data => data.sellingPrice !== undefined || data.unitPrice !== undefined, {
+            message: "Selling price or unit price must be positive",
+            path: ["sellingPrice"]
         })).min(1, "At least one sale item is required")
     })
 });
@@ -136,7 +149,7 @@ const createSaleSchema = z.object({
 // Stock adjustment schema
 const adjustStockSchema = z.object({
     body: z.object({
-        shopId: z.string().uuid("Invalid shop ID format"),
+        shopId: z.string().uuid("Invalid shop ID format").optional(),
         productId: z.string().uuid("Invalid product ID format"),
         type: z.enum(["addition", "reduction"]),
         quantity: z.number().positive("Quantity must be positive"),
@@ -152,7 +165,8 @@ const createUserSchema = z.object({
         name: z.string().min(2, "Name must be at least 2 characters"),
         email: z.string().email("Invalid email address"),
         password: z.string().min(6, "Password must be at least 6 characters"),
-        role: z.enum(["admin", "customer"]).optional()
+        role: z.enum(["admin", "staff", "manager", "cashier"]).optional(),
+        shopId: z.string().uuid("Invalid shop ID format")
     })
 });
 
@@ -164,7 +178,7 @@ const updateUserSchema = z.object({
         name: z.string().min(2, "Name must be at least 2 characters").optional(),
         email: z.string().email("Invalid email address").optional(),
         password: z.string().min(6, "Password must be at least 6 characters").optional(),
-        role: z.enum(["admin", "customer"]).optional(),
+        role: z.enum(["admin", "staff", "manager", "cashier"]).optional(),
         isActive: z.boolean().optional()
     })
 });

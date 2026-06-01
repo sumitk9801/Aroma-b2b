@@ -53,7 +53,8 @@ const getSalesSummary = async (shopId, interval) => {
     return {
         totalSales,
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-        averageOrderValue
+        averageOrderValue,
+        avgOrderValue: averageOrderValue
     };
 };
 
@@ -123,10 +124,17 @@ const getPurchaseSummary = async (shopId) => {
         amount: parseFloat(amount.toFixed(2))
     }));
 
+    const totalPurchases = purchaseAggregate._count.id || 0;
+    const totalSpent = purchaseAggregate._sum.totalAmount || 0.00;
+    const avgPerPurchase = totalPurchases > 0 ? parseFloat((totalSpent / totalPurchases).toFixed(2)) : 0.00;
+
     return {
-        totalPurchases: purchaseAggregate._count.id || 0,
-        totalRevenueSpent: purchaseAggregate._sum.totalAmount || 0.00,
+        totalPurchases,
+        totalRevenueSpent: totalSpent,
+        totalSpent,
         totalInventoryBought: itemsSum._sum.quantity || 0,
+        totalItemsBought: itemsSum._sum.quantity || 0,
+        avgPerPurchase,
         spendingTrends
     };
 };
@@ -173,9 +181,15 @@ const getProfitSummary = async (shopId) => {
 
     return {
         revenue: parseFloat(revenue.toFixed(2)),
+        totalRevenue: parseFloat(revenue.toFixed(2)),
         costOfGoodsSold: parseFloat(costOfGoodsSold.toFixed(2)),
+        cogs: parseFloat(costOfGoodsSold.toFixed(2)),
+        totalCost: parseFloat(costOfGoodsSold.toFixed(2)),
         estimatedProfit: parseFloat(profit.toFixed(2)),
-        marginPercentage
+        profit: parseFloat(profit.toFixed(2)),
+        marginPercentage,
+        marginPercent: marginPercentage,
+        profitMargin: marginPercentage
     };
 };
 
@@ -215,6 +229,7 @@ const getStockValuation = async (shopId) => {
     return {
         totalItems,
         totalAssetCost: parseFloat(totalAssetCost.toFixed(2)),
+        totalCostValue: parseFloat(totalAssetCost.toFixed(2)),
         totalRetailValue: parseFloat(totalRetailValue.toFixed(2)),
         potentialProfit: parseFloat(potentialProfit.toFixed(2))
     };
@@ -326,7 +341,9 @@ const getFastMovingProducts = async (shopId, limit = 5) => {
             name: product ? product.name : "Unknown Product",
             skuCode: product ? product.skuCode : "N/A",
             transactionCount: agg._count.id || 0,
+            totalQtySold: agg._sum.quantity || 0,
             totalQuantitySold: agg._sum.quantity || 0,
+            currentStock: product ? product.currentStock : 0,
             remainingStock: product ? product.currentStock : 0
         };
     });

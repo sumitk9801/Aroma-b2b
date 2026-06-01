@@ -1,9 +1,9 @@
-datasource db {
-  provider = "postgresql"
-}
-
 generator client {
   provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
 }
 
 model User {
@@ -11,26 +11,27 @@ model User {
   name             String
   email            String          @unique
   password         String
-  role             String          @default("customer")
+  role             String          @default("staff")
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
-  shops            Shop[]          @relation("UserShops")
   purchases        Purchase[]      @relation("UserPurchases")
+  refreshTokens    RefreshToken[]
   sales            Sale[]          @relation("UserSales")
+  shops            Shop[]          @relation("UserShops")
   stockAdjustments StockMovement[] @relation("UserStockMovements")
+  shopStaff        ShopStaff[]
 }
 
 model BlackList {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  expireAt  DateTime
+  id       String   @id @default(uuid())
+  token    String   @unique
+  expireAt DateTime
 }
 
 model Shop {
   id               String          @id @default(uuid())
   ownerId          String
-  owner            User            @relation("UserShops", fields: [ownerId], references: [id], onDelete: Cascade)
   shopName         String
   businessType     String?
   address          String?
@@ -41,26 +42,38 @@ model Shop {
   products         Product[]
   purchases        Purchase[]
   sales            Sale[]
+  owner            User            @relation("UserShops", fields: [ownerId], references: [id], onDelete: Cascade)
   stockAdjustments StockMovement[]
+  staff            ShopStaff[]
+}
+
+model ShopStaff {
+  id        String   @id @default(uuid())
+  shopId    String
+  userId    String
+  role      String   @default("staff")
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, userId])
 }
 
 model Category {
   id        String    @id @default(uuid())
   shopId    String
-  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   name      String
   image     String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   products  Product[]
 }
 
 model Product {
   id               String          @id @default(uuid())
   shopId           String
-  shop             Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
   categoryId       String
-  categoryRef      Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   name             String
   description      String?
   skuCode          String          @unique
@@ -73,6 +86,8 @@ model Product {
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+  categoryRef      Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  shop             Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
   purchaseItems    PurchaseItem[]
   saleItems        SaleItem[]
   stockAdjustments StockMovement[]
@@ -81,58 +96,56 @@ model Product {
 model Purchase {
   id           String         @id @default(uuid())
   shopId       String
-  shop         Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
   supplierName String?
   totalAmount  Float          @default(0.00)
   createdBy    String
-  creator      User           @relation("UserPurchases", fields: [createdBy], references: [id], onDelete: Cascade)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  creator      User           @relation("UserPurchases", fields: [createdBy], references: [id], onDelete: Cascade)
+  shop         Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
   items        PurchaseItem[]
 }
 
 model PurchaseItem {
   id            String   @id @default(uuid())
   purchaseId    String
-  purchase      Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   productId     String
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity      Float
   purchasePrice Float
   subtotal      Float
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  purchase      Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
 }
 
 model Sale {
   id            String     @id @default(uuid())
   shopId        String
-  shop          Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customerName  String?
   totalAmount   Float      @default(0.00)
   paymentMethod String?
   createdBy     String
-  creator       User       @relation("UserSales", fields: [createdBy], references: [id], onDelete: Cascade)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+  creator       User       @relation("UserSales", fields: [createdBy], references: [id], onDelete: Cascade)
+  shop          Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
   items         SaleItem[]
 }
 
 model SaleItem {
-  id           String   @id @default(uuid())
+  id           String  @id @default(uuid())
   saleId       String
-  sale         Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
   productId    String
-  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity     Float
   sellingPrice Float
   subtotal     Float
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sale         Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
 }
 
 model StockMovement {
   id            String   @id @default(uuid())
   shopId        String
-  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   productId     String
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   type          String
   quantity      Float
   previousStock Float
@@ -141,6 +154,17 @@ model StockMovement {
   referenceId   String?
   note          String?
   createdBy     String
-  creator       User     @relation("UserStockMovements", fields: [createdBy], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
+  creator       User     @relation("UserStockMovements", fields: [createdBy], references: [id], onDelete: Cascade)
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

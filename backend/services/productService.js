@@ -1,8 +1,17 @@
 const { prisma } = require("../db/db");
 
+const mapProduct = (product) => {
+    if (!product) return null;
+    return {
+        ...product,
+        imageUrl: product.image
+    };
+};
+
 const createProduct = async (productData) => {
-    const { shopId, categoryId, name, description, skuCode, barcodes, image, purchasePrice, sellingPrice, currentStock, minimumStock, isActive } = productData;
-    return await prisma.product.create({
+    const { shopId, categoryId, name, description, skuCode, barcodes, image, imageUrl, purchasePrice, sellingPrice, currentStock, minimumStock, isActive } = productData;
+    const finalImage = image || imageUrl;
+    const product = await prisma.product.create({
         data: {
             shopId,
             categoryId,
@@ -10,7 +19,7 @@ const createProduct = async (productData) => {
             description,
             skuCode,
             barcodes,
-            image: image || null,
+            image: finalImage || null,
             purchasePrice: parseFloat(purchasePrice || 0.0),
             sellingPrice: parseFloat(sellingPrice || 0.0),
             currentStock: parseFloat(currentStock || 0.0),
@@ -18,15 +27,17 @@ const createProduct = async (productData) => {
             isActive: isActive !== undefined ? isActive : true
         }
     });
+    return mapProduct(product);
 };
 
 const getAllProducts = async () => {
-    return await prisma.product.findMany({
+    const products = await prisma.product.findMany({
         include: {
             shop: { select: { id: true, shopName: true } },
             categoryRef: { select: { id: true, name: true } }
         }
     });
+    return products.map(mapProduct);
 };
 
 const getProductById = async (id) => {
@@ -40,19 +51,20 @@ const getProductById = async (id) => {
     if (!product) {
         throw new Error("Product not found");
     }
-    return product;
+    return mapProduct(product);
 };
 
 const updateProduct = async (id, updateData) => {
-    const { name, description, skuCode, barcodes, image, purchasePrice, sellingPrice, currentStock, minimumStock, isActive } = updateData;
-    return await prisma.product.update({
+    const { name, description, skuCode, barcodes, image, imageUrl, purchasePrice, sellingPrice, currentStock, minimumStock, isActive } = updateData;
+    const finalImage = image !== undefined ? image : (imageUrl !== undefined ? imageUrl : undefined);
+    const product = await prisma.product.update({
         where: { id },
         data: {
             name,
             description,
             skuCode,
             barcodes,
-            image: image || undefined,
+            image: finalImage,
             purchasePrice: purchasePrice !== undefined ? parseFloat(purchasePrice) : undefined,
             sellingPrice: sellingPrice !== undefined ? parseFloat(sellingPrice) : undefined,
             currentStock: currentStock !== undefined ? parseFloat(currentStock) : undefined,
@@ -60,6 +72,7 @@ const updateProduct = async (id, updateData) => {
             isActive
         }
     });
+    return mapProduct(product);
 };
 
 const deleteProduct = async (id) => {
@@ -70,12 +83,12 @@ const getLowStockProducts = async () => {
     const products = await prisma.product.findMany({
         include: { shop: { select: { id: true, shopName: true } } }
     });
-    return products.filter(p => p.currentStock <= p.minimumStock);
+    return products.filter(p => p.currentStock <= p.minimumStock).map(mapProduct);
 };
 
 const searchProducts = async (searchTerm) => {
     if (!searchTerm) return [];
-    return await prisma.product.findMany({
+    const products = await prisma.product.findMany({
         where: {
             OR: [
                 { name: { contains: searchTerm, mode: "insensitive" } },
@@ -89,6 +102,7 @@ const searchProducts = async (searchTerm) => {
             categoryRef: { select: { id: true, name: true } }
         }
     });
+    return products.map(mapProduct);
 };
 
 const filterProducts = async (filters) => {
@@ -113,11 +127,13 @@ const filterProducts = async (filters) => {
         }
     });
     
+    const mapped = products.map(mapProduct);
+    
     if (lowStock === "true" || lowStock === true) {
-        return products.filter(p => p.currentStock <= p.minimumStock);
+        return mapped.filter(p => p.currentStock <= p.minimumStock);
     }
     
-    return products;
+    return mapped;
 };
 
 module.exports = { 

@@ -12,9 +12,19 @@ const resolveShopContext = async (req) => {
         return req.query.shopId || null;
     }
 
-    // Otherwise, fetch the shop owned by this user
+    // Support filtering by a specific shop if the user owns it
+    if (req.query.shopId) {
+        const owned = await prisma.shop.findFirst({
+            where: { id: req.query.shopId, ownerId: req.user.id },
+            select: { id: true }
+        });
+        if (owned) return owned.id;
+    }
+
+    // Otherwise, fetch the primary shop owned by this user (first created)
     const ownedShop = await prisma.shop.findFirst({
         where: { ownerId: req.user.id },
+        orderBy: { createdAt: "asc" },
         select: { id: true }
     });
 

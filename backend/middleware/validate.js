@@ -22,6 +22,7 @@ const validate = (schema) => (req, res, next) => {
                 field: e.path.slice(1).join("."), // removes 'body'/'query' prefix from path
                 message: e.message
             }));
+            console.error("Zod Validation Failed:", JSON.stringify(errors, null, 2));
             return res.status(400).json({
                 success: false,
                 message: "Validation failed",

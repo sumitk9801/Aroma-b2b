@@ -14,6 +14,7 @@ const uploadProductImage = async (file) => {
     });
     
     return {
+        url: uploadedImage.secure_url,
         imageUrl: uploadedImage.secure_url,
         public_id: uploadedImage.public_id
     };

@@ -1,5 +1,5 @@
 module.exports = {
   datasource: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/aroma_b2b",
+    url: process.env.DATABASE_URL || "postgresql://postgres:epdpwEyuyMwmPfZeasukhtPBlbqDZzrW@zephyr.proxy.rlwy.net:36753/railway",
   },
 };

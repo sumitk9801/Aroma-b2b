@@ -11,7 +11,7 @@ const createShop = async (req, res) => {
 
 const getShops = async (req, res) => {
     try {
-        const shops = await shopService.getAllShops();
+        const shops = await shopService.getAllShops(req.user.id);
         res.status(200).json({ success: true, data: shops });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

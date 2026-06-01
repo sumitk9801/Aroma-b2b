@@ -31,24 +31,118 @@ const login = async (loginData) => {
     if (!isMatch) {
         throw new Error("Invalid email or password");
     }
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "1h" });
+    
+    // Access token (3 days)
+    const token = jwt.sign(
+        { id: user.id, role: user.role },
+        process.env.JWT_SECRET || "fallback_secret",
+        { expiresIn: "3d" }
+    );
+    
+    // Refresh token (30 days)
+    const refreshToken = jwt.sign(
+        { id: user.id },
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "fallback_refresh_secret",
+        { expiresIn: "30d" }
+    );
+    
+    // Store refresh token in DB
+    await prisma.refreshToken.create({
+        data: {
+            token: refreshToken,
+            userId: user.id,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        }
+    });
+
     return {
         token,
+        refreshToken,
         user: { id: user.id, name: user.name, email: user.email, role: user.role }
     };
 };
 
-const logout = async (token) => {
-    if (!token) {
-        throw new Error("No token provided");
+const logout = async (token, refreshToken) => {
+    if (token) {
+        await prisma.blackList.create({
+            data: {
+                token,
+                expireAt: new Date(Date.now() + 5 * 60 * 60 * 1000)
+            }
+        }).catch(() => {}); // ignore duplicates
     }
-    await prisma.blackList.create({
-        data: {
-            token,
-            expireAt: new Date(Date.now() + 5 * 60 * 60 * 1000)
-        }
-    });
+    
+    if (refreshToken) {
+        await prisma.refreshToken.deleteMany({
+            where: { token: refreshToken }
+        }).catch(() => {});
+    }
+    
     return true;
+};
+
+const refreshSession = async (tokenVal) => {
+    if (!tokenVal) {
+        throw new Error("No refresh token provided");
+    }
+    
+    let decoded;
+    try {
+        decoded = jwt.verify(
+            tokenVal,
+            process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "fallback_refresh_secret"
+        );
+    } catch (err) {
+        // Delete expired token if it exists in DB
+        await prisma.refreshToken.deleteMany({ where: { token: tokenVal } }).catch(() => {});
+        throw new Error("Invalid or expired refresh token");
+    }
+    
+    const dbToken = await prisma.refreshToken.findUnique({
+        where: { token: tokenVal },
+        include: { user: true }
+    });
+    
+    if (!dbToken || dbToken.expiresAt < new Date()) {
+        if (dbToken) {
+            await prisma.refreshToken.delete({ where: { id: dbToken.id } }).catch(() => {});
+        }
+        throw new Error("Refresh token expired or revoked");
+    }
+    
+    const user = dbToken.user;
+    
+    // Generate new access token (3 days)
+    const newAccessToken = jwt.sign(
+        { id: user.id, role: user.role },
+        process.env.JWT_SECRET || "fallback_secret",
+        { expiresIn: "3d" }
+    );
+    
+    // Rotate refresh token (Generate new one)
+    const newRefreshToken = jwt.sign(
+        { id: user.id },
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "fallback_refresh_secret",
+        { expiresIn: "30d" }
+    );
+    
+    // Delete old refresh token, save new one
+    await prisma.$transaction([
+        prisma.refreshToken.delete({ where: { id: dbToken.id } }),
+        prisma.refreshToken.create({
+            data: {
+                token: newRefreshToken,
+                userId: user.id,
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            }
+        })
+    ]);
+    
+    return {
+        token: newAccessToken,
+        refreshToken: newRefreshToken,
+        user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    };
 };
 
 const getProfile = async (userId) => {
@@ -62,4 +156,4 @@ const getProfile = async (userId) => {
     return user;
 };
 
-module.exports = { register, login, logout, getProfile };
+module.exports = { register, login, logout, refreshSession, getProfile };

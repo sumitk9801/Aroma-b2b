@@ -15,7 +15,6 @@ const errorMiddleware = (err, req, res, next) => {
     // Log the error detailed context with stack trace automatically
     Logger.error(err.message || "Generic Exception Captured", err.stack);
 
-
     // Handle Zod Schema Validation errors
     if (err instanceof ZodError) {
         statusCode = 400;
@@ -26,19 +25,22 @@ const errorMiddleware = (err, req, res, next) => {
             message: e.message
         }));
     }
-
     // Handle standard operational ApiErrors
-    if (err instanceof ApiError) {
+    else if (err instanceof ApiError) {
         statusCode = err.statusCode;
         message = err.message;
         errors = err.errors;
     }
-
     // Clean details for database exceptions to prevent raw DB leakage
-    if (err.name && err.name.startsWith("PrismaClient")) {
+    else if (err.name && (err.name.startsWith("PrismaClient") || err.name.includes("Prisma"))) {
         statusCode = 400;
-        message = "Database operational failure occurred";
-        // Do not return raw Prisma stacks or message paths for security
+        message = "An unexpected database error occurred. Please try again.";
+        errors = [];
+    }
+    // Handle all other unhandled runtime or programming exceptions (e.g. TypeError, ReferenceError)
+    else {
+        statusCode = 500;
+        message = "Something went wrong. Please try again.";
         errors = [];
     }
 

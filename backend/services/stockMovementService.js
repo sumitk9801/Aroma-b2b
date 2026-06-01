@@ -55,16 +55,18 @@ const adjustStock = async (adjustmentData, userId) => {
             data: { currentStock: newStock }
         });
 
+        const finalShopId = shopId || product.shopId;
+
         // Create movement record
         const movement = await tx.stockMovement.create({
             data: {
-                shopId,
+                shopId: finalShopId,
                 productId,
                 type,
                 quantity: change,
                 previousStock: product.currentStock,
                 newStock,
-                reason,
+                note: reason,
                 referenceType,
                 referenceId,
                 createdBy: userId

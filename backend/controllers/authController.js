@@ -14,13 +14,27 @@ const register = async (req, res) => {
     }
 };
 
+const setRefreshTokenCookie = (res, token) => {
+    res.cookie('refreshToken', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+};
+
 const login = async (req, res) => {
     try {
         const result = await authService.login(req.body);
+        const { token, refreshToken, user } = result;
+        
+        // Set HTTP-only cookie
+        setRefreshTokenCookie(res, refreshToken);
+        
         res.status(200).json({
             success: true,
             message: "User logged in successfully",
-            data: result
+            data: { token, user }
         });
     } catch (err) {
         const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || req.ip;
@@ -33,7 +47,17 @@ const login = async (req, res) => {
 const logout = async (req, res) => {
     try {
         const token = req.headers.authorization?.split(" ")[1];
-        await authService.logout(token);
+        const refreshToken = req.cookies?.refreshToken;
+        
+        await authService.logout(token, refreshToken);
+        
+        // Clear HTTP-only cookie
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production'
+        });
+        
         res.status(200).json({
             success: true,
             message: "User logged out successfully"
@@ -58,17 +82,23 @@ const getCurrentUser = async (req, res) => {
 
 const refreshToken = async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(" ")[1];
-        if (!token) {
-            return res.status(401).json({ success: false, message: "No token provided" });
+        const tokenVal = req.cookies?.refreshToken;
+        if (!tokenVal) {
+            return res.status(400).json({ success: false, message: "No refresh token provided" });
         }
+        const result = await authService.refreshSession(tokenVal);
+        const { token, refreshToken: newRefreshToken, user } = result;
+        
+        // Set new HTTP-only cookie
+        setRefreshTokenCookie(res, newRefreshToken);
+        
         res.status(200).json({
             success: true,
             message: "Token refreshed successfully",
-            data: { token }
+            data: { token, user }
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(401).json({ success: false, message: err.message });
     }
 };
 

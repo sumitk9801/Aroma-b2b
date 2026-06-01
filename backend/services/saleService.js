@@ -20,13 +20,14 @@ const createSale = async (saleData, userId) => {
                 throw new Error(`Insufficient stock for product ${product.name}. Available: ${product.currentStock}`);
             }
 
-            const subtotal = item.quantity * item.sellingPrice;
+            const finalPrice = item.sellingPrice !== undefined ? item.sellingPrice : item.unitPrice;
+            const subtotal = item.quantity * finalPrice;
             totalAmount += subtotal;
 
             itemsData.push({
                 productId: item.productId,
                 quantity: parseFloat(item.quantity),
-                sellingPrice: parseFloat(item.sellingPrice),
+                sellingPrice: parseFloat(finalPrice),
                 subtotal: parseFloat(subtotal)
             });
         }
@@ -74,8 +75,10 @@ const createSale = async (saleData, userId) => {
     });
 };
 
-const getAllSales = async () => {
+const getAllSales = async (shopId) => {
+    const whereClause = shopId ? { shopId } : {};
     return await prisma.sale.findMany({
+        where: whereClause,
         include: {
             items: { include: { product: { select: { id: true, name: true, skuCode: true } } } },
             creator: { select: { id: true, name: true } },
@@ -113,24 +116,32 @@ const getSalesByProduct = async (productId) => {
     });
 };
 
-const getDailySales = async () => {
-    const sales = await prisma.sale.findMany();
+const getDailySales = async (shopId) => {
+    const whereClause = shopId ? { shopId } : {};
+    const sales = await prisma.sale.findMany({ where: whereClause });
     const daily = {};
     for (const s of sales) {
         const dateStr = s.createdAt.toISOString().split("T")[0];
         daily[dateStr] = (daily[dateStr] || 0) + s.totalAmount;
     }
-    return daily;
+    return Object.entries(daily).map(([date, revenue]) => ({
+        date,
+        revenue
+    }));
 };
 
-const getMonthlySales = async () => {
-    const sales = await prisma.sale.findMany();
+const getMonthlySales = async (shopId) => {
+    const whereClause = shopId ? { shopId } : {};
+    const sales = await prisma.sale.findMany({ where: whereClause });
     const monthly = {};
     for (const s of sales) {
         const monthStr = s.createdAt.toISOString().substring(0, 7);
         monthly[monthStr] = (monthly[monthStr] || 0) + s.totalAmount;
     }
-    return monthly;
+    return Object.entries(monthly).map(([month, revenue]) => ({
+        month,
+        revenue
+    }));
 };
 
 module.exports = { createSale, getAllSales, getSaleById, getSalesByProduct, getDailySales, getMonthlySales };
