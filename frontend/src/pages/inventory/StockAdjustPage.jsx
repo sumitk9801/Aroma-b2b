@@ -92,8 +92,8 @@ export default function StockAdjustPage() {
                 Adjustment Type <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: 'addition', label: 'Add Stock', icon: Plus, color: 'neon' },
+                 {[
+                  { value: 'addition', label: 'Add Stock', icon: Plus, color: 'additionGreen' },
                   { value: 'reduction', label: 'Remove Stock', icon: Minus, color: 'red' },
                 ].map((opt) => {
                   const Icon = opt.icon;
@@ -103,8 +103,8 @@ export default function StockAdjustPage() {
                       key={opt.value}
                       className={cn(
                         'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
-                        isSelected && opt.color === 'neon'
-                          ? 'border-neon bg-neon/10'
+                        isSelected && opt.color === 'additionGreen'
+                          ? 'border-additionGreen bg-additionGreen/10'
                           : isSelected && opt.color === 'red'
                           ? 'border-red-400 bg-red-50'
                           : 'border-border hover:border-grayLight'
@@ -113,9 +113,9 @@ export default function StockAdjustPage() {
                       <input type="radio" value={opt.value} {...register('type')} className="hidden" />
                       <div className={cn(
                         'w-8 h-8 rounded-lg flex items-center justify-center',
-                        isSelected && opt.color === 'neon' ? 'bg-neon' : 'bg-bg'
+                        isSelected && opt.color === 'additionGreen' ? 'bg-additionGreen' : 'bg-bg'
                       )}>
-                        <Icon size={16} className={isSelected && opt.color === 'neon' ? 'text-navyDeep' : 'text-grayMid'} />
+                        <Icon size={16} className={isSelected && opt.color === 'additionGreen' ? 'text-navyDeep' : 'text-grayMid'} />
                       </div>
                       <span className={cn('text-sm font-medium', isSelected ? 'text-navy' : 'text-grayMid')}>
                         {opt.label}

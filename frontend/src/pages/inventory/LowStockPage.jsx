@@ -94,7 +94,7 @@ export default function LowStockPage() {
                           ? '#ef4444'
                           : percentage < 50
                           ? '#f59e0b'
-                          : '#B8ED23',
+                          : '#7dad3f',
                       }}
                     />
                   </div>

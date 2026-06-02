@@ -54,7 +54,11 @@ export default function StockMovementsPage() {
     { key: 'newStock', label: 'After', render: (v) => <span className="font-medium text-navy">{v ?? '—'}</span> },
     {
       key: 'referenceType', label: 'Reference',
-      render: (v) => <Badge variant="info">{v || 'manual'}</Badge>,
+      render: (v) => (
+        <Badge variant={v || 'manual'}>
+          {v ? (v.charAt(0).toUpperCase() + v.slice(1)) : 'Manual'}
+        </Badge>
+      ),
     },
     {
       key: 'user', label: 'By',

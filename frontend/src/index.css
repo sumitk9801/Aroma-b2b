@@ -10,10 +10,12 @@
   --color-grayMid: #5B5A6E;
   --color-grayLight: #717189;
   --color-border: #B7B8C5;
-  --color-paleGreen: #DFF09F;
-  --color-softGreen: #CDF35E;
-  --color-lime: #C1F42F;
-  --color-neon: #B8ED23;
+  --color-paleGreen: #f1f7e9;
+  --color-softGreen: #a5d26b;
+  --color-lime: #6b9835;
+  --color-neon: #7dad3f;
+  --color-saleBlue: #236476;
+  --color-additionGreen: #7dad3f;
 
   --font-display: 'Syne', sans-serif;
   --font-body: 'DM Sans', sans-serif;
@@ -74,7 +76,7 @@ h1, h2, h3, h4, h5 {
 
 /* Button variants */
 .btn-primary {
-  @apply bg-neon text-navyDeep font-semibold rounded-xl px-5 py-2.5 hover:bg-lime 
+  @apply bg-neon text-white font-semibold rounded-xl px-5 py-2.5 hover:bg-lime 
          transition-colors duration-200 flex items-center gap-2 text-sm;
 }
 .btn-secondary {

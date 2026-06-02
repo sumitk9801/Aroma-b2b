@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NAV_ITEMS } from '../../utils/constants';
 import { selectIsAdmin, selectUser } from '../../store/slices/authSlice';
-import { selectSidebarCollapsed, toggleSidebar } from '../../store/slices/uiSlice';
+import { selectSidebarCollapsed, toggleSidebar, selectMobileMenuOpen, setMobileMenuOpen } from '../../store/slices/uiSlice';
 import { cn } from '../../utils/cn';
 
 export default function Sidebar() {
@@ -13,11 +13,22 @@ export default function Sidebar() {
   const isAdmin = useSelector(selectIsAdmin);
   const user = useSelector(selectUser);
   const collapsed = useSelector(selectSidebarCollapsed);
+  const mobileMenuOpen = useSelector(selectMobileMenuOpen);
   const location = useLocation();
   const [openMenus, setOpenMenus] = useState({ Inventory: true });
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLogoHovered, setIsLogoHovered] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1024px)');
+    const listener = () => setIsMobile(media.matches);
+    listener();
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
 
   const toggleMenu = (label) => {
-    if (collapsed) return;
+    if (collapsed && !isMobile) return;
     setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
@@ -30,18 +41,36 @@ export default function Sidebar() {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 64 : 256 }}
+      animate={{ width: isMobile ? 256 : (collapsed ? 64 : 256) }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="relative flex flex-col h-screen bg-navyDeep overflow-hidden flex-shrink-0"
-      style={{ minWidth: collapsed ? 64 : 256 }}
+      className={cn(
+        "fixed inset-y-0 left-0 z-50 flex flex-col h-screen bg-navyDeep overflow-hidden flex-shrink-0",
+        "lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out",
+        isMobile && (mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full")
+      )}
+      style={{ minWidth: isMobile ? 0 : (collapsed ? 64 : 256) }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-        <div className="w-8 h-8 bg-neon rounded-lg flex items-center justify-center flex-shrink-0">
-          <span className="text-navyDeep font-display font-bold text-sm">A</span>
+      <div 
+        className="flex items-center gap-2 px-4 py-2 border-b border-white/10"
+        onMouseEnter={() => setIsLogoHovered(true)}
+        onMouseLeave={() => setIsLogoHovered(false)}
+      >
+        <div className="w-12 h-12 overflow-hidden flex items-center justify-center flex-shrink-0 bg-transparent relative">
+          {collapsed && isLogoHovered ? (
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="w-8 h-8 bg-white border border-border shadow-md rounded-full flex items-center justify-center text-navyDeep hover:bg-neon hover:border-neon hover:text-navyDeep transition-all duration-200"
+              title="Expand Sidebar"
+            >
+              <PanelLeftOpen size={15} />
+            </button>
+          ) : (
+            <img src="/favicon.png" alt="Aroma B2B" className="w-full h-full object-contain scale-[3] mt-2" />
+          )}
         </div>
         <AnimatePresence>
-          {!collapsed && (
+          {(!collapsed || isMobile) && (
             <motion.div
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: 'auto' }}
@@ -60,12 +89,12 @@ export default function Sidebar() {
       {/* Toggle button */}
       <button
         onClick={() => dispatch(toggleSidebar())}
-        className="absolute top-5 -right-3.5 z-10 bg-white border border-border shadow-md rounded-full p-1.5 text-navyDeep hover:bg-neon hover:border-neon hover:text-navyDeep transition-all duration-200 flex items-center justify-center"
+        className={cn(
+          "absolute top-5 -right-0.5 z-10 w-8 h-8 bg-white border border-border shadow-md rounded-full flex items-center justify-center text-navyDeep hover:bg-neon hover:border-neon hover:text-navyDeep transition-all duration-200",
+          collapsed ? "hidden" : "hidden lg:flex"
+        )}
       >
-        {collapsed
-          ? <PanelLeftOpen size={15} />
-          : <PanelLeftClose size={15} />
-        }
+        <PanelLeftClose size={15} />
       </button>
 
       {/* Navigation */}
@@ -130,6 +159,7 @@ export default function Sidebar() {
                           <NavLink
                             key={child.path}
                             to={child.path}
+                            onClick={() => isMobile && dispatch(setMobileMenuOpen(false))}
                             className={cn(
                               'flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors relative',
                               active
@@ -177,6 +207,7 @@ export default function Sidebar() {
               key={item.path}
               to={item.path}
               title={collapsed ? item.label : undefined}
+              onClick={() => isMobile && dispatch(setMobileMenuOpen(false))}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors relative',
                 active

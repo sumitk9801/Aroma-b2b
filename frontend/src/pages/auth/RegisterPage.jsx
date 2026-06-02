@@ -49,7 +49,7 @@ export default function RegisterPage() {
       <div className="hidden lg:flex lg:w-1/2 bg-navyDeep relative overflow-hidden flex-col items-center justify-center p-12">
         <div className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: 'linear-gradient(#B8ED23 1px, transparent 1px), linear-gradient(90deg, #B8ED23 1px, transparent 1px)',
+            backgroundImage: 'linear-gradient(#7dad3f 1px, transparent 1px), linear-gradient(90deg, #7dad3f 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }}
         />
@@ -65,8 +65,8 @@ export default function RegisterPage() {
         />
         <div className="relative z-10 text-center">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-neon rounded-2xl flex items-center justify-center">
-              <span className="font-display font-bold text-navyDeep text-xl">A</span>
+            <div className="w-12 h-12 overflow-hidden flex items-center justify-center bg-transparent">
+              <img src="/favicon.png" alt="Aroma B2B" className="w-full h-full object-contain scale-[4.5]" />
             </div>
             <span className="font-display font-bold text-white text-2xl">
               Aroma <span className="text-neon">B2B</span>
@@ -91,8 +91,8 @@ export default function RegisterPage() {
           className="w-full max-w-md"
         >
           <div className="flex lg:hidden items-center gap-2 mb-8">
-            <div className="w-9 h-9 bg-navy rounded-xl flex items-center justify-center">
-              <span className="font-display font-bold text-neon">A</span>
+            <div className="w-9 h-9 overflow-hidden flex items-center justify-center bg-transparent">
+              <img src="/favicon.png" alt="Aroma B2B" className="w-full h-full object-contain scale-[4]" />
             </div>
             <span className="font-display font-bold text-navy text-xl">Aroma B2B</span>
           </div>

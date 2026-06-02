@@ -45,7 +45,7 @@ export default function TopProductsChart({ data = [] }) {
             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F6F6F5' }} />
             <Bar dataKey="value" radius={[0, 6, 6, 0]}>
               {chartData.map((_, i) => (
-                <Cell key={i} fill={i === 0 ? '#B8ED23' : '#C1F42F'} />
+                <Cell key={i} fill={i === 0 ? '#7dad3f' : '#6b9835'} />
               ))}
             </Bar>
           </BarChart>

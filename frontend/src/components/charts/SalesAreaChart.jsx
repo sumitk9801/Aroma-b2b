@@ -39,7 +39,7 @@ export default function SalesAreaChart({ last7Days = [], last30Days = [] }) {
               className={cn(
                 'px-4 py-1.5 rounded-lg text-xs font-semibold transition-all',
                 range === r
-                  ? 'bg-neon text-navyDeep shadow-sm'
+                  ? 'bg-neon text-white shadow-sm'
                   : 'text-grayMid hover:text-navy'
               )}
             >
@@ -53,8 +53,8 @@ export default function SalesAreaChart({ last7Days = [], last30Days = [] }) {
         <AreaChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#B8ED23" stopOpacity={0.4} />
-              <stop offset="100%" stopColor="#B8ED23" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="#7dad3f" stopOpacity={0.4} />
+              <stop offset="100%" stopColor="#7dad3f" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <XAxis
@@ -71,7 +71,7 @@ export default function SalesAreaChart({ last7Days = [], last30Days = [] }) {
             strokeWidth={2}
             fill="url(#salesGradient)"
             dot={false}
-            activeDot={{ r: 4, fill: '#B8ED23', stroke: '#1B1946', strokeWidth: 2 }}
+            activeDot={{ r: 4, fill: '#7dad3f', stroke: '#1B1946', strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>

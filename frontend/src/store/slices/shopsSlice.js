@@ -1,25 +1,52 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { shopsApi } from '../../api/shops.api';
 import { getErrorMessage } from '../../api/client';
+import { setActiveShop } from './uiSlice';
 
-export const fetchShops = createAsyncThunk('shops/fetchAll', async (params = {}, { rejectWithValue }) => {
+export const fetchShops = createAsyncThunk('shops/fetchAll', async (params = {}, { dispatch, getState, rejectWithValue }) => {
   try {
     const res = await shopsApi.getAll(params);
-    return res.data.data || res.data;
+    const shops = res.data.data || res.data;
+    const list = Array.isArray(shops) ? shops : shops?.shops || [];
+
+    // Auto-select the first shop if no active shop is set yet
+    const activeShopId = getState().ui.activeShopId;
+    if (!activeShopId && list.length > 0) {
+      dispatch(setActiveShop({ id: list[0].id, name: list[0].shopName || list[0].name }));
+    } else if (activeShopId && list.length > 0) {
+      // Validate that stored activeShopId still exists in the list
+      const stillExists = list.find((s) => s.id === activeShopId);
+      if (!stillExists) {
+        dispatch(setActiveShop({ id: list[0].id, name: list[0].shopName || list[0].name }));
+      }
+    }
+
+    return list;
   } catch (e) { return rejectWithValue(getErrorMessage(e)); }
 });
 
-export const createShop = createAsyncThunk('shops/create', async (data, { rejectWithValue }) => {
+export const createShop = createAsyncThunk('shops/create', async (data, { dispatch, rejectWithValue }) => {
   try {
     const res = await shopsApi.create(data);
-    return res.data.data || res.data;
+    const shop = res.data.data || res.data;
+    const shopObj = shop?.shop || shop;
+    // Auto-switch to the newly created shop
+    dispatch(setActiveShop({ id: shopObj.id, name: shopObj.shopName || shopObj.name }));
+    return shopObj;
   } catch (e) { return rejectWithValue(getErrorMessage(e)); }
 });
 
-export const updateShop = createAsyncThunk('shops/update', async ({ id, data }, { rejectWithValue }) => {
+export const updateShop = createAsyncThunk('shops/update', async ({ id, data }, { getState, dispatch, rejectWithValue }) => {
   try {
     const res = await shopsApi.update(id, data);
-    return res.data.data || res.data;
+    const shop = res.data.data || res.data;
+    const shopObj = shop?.shop || shop;
+    // Update active shop name if this is the currently active shop
+    const activeShopId = getState().ui.activeShopId;
+    if (activeShopId === id) {
+      dispatch(setActiveShop({ id: shopObj.id, name: shopObj.shopName || shopObj.name }));
+    }
+    return shopObj;
   } catch (e) { return rejectWithValue(getErrorMessage(e)); }
 });
 

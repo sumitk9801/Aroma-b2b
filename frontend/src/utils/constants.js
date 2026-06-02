@@ -51,10 +51,12 @@ export const REFERENCE_TYPES = [
   { value: 'return',     label: 'Return' },
 ];
 
-// ─── User Roles ───────────────────────────────────────────────────────────────
+// ─── User / Staff Roles ───────────────────────────────────────────────────────
 export const USER_ROLES = [
-  { value: 'admin',    label: 'Admin' },
-  { value: 'customer', label: 'Customer' },
+  { value: 'staff',   label: 'Staff' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'cashier', label: 'Cashier' },
+  { value: 'admin',   label: 'Admin' },
 ];
 
 // ─── Report Intervals ────────────────────────────────────────────────────────
@@ -82,10 +84,10 @@ export const LS_REFRESH_TOKEN_KEY = 'aroma_refresh_token';
 
 // ─── Chart Colors ─────────────────────────────────────────────────────────────
 export const CHART_COLORS = {
-  neon:  '#B8ED23',
-  lime:  '#C1F42F',
+  neon:  '#7dad3f',
+  lime:  '#6b9835',
   navy:  '#1B1946',
-  paleGreen: '#DFF09F',
+  paleGreen: '#f1f7e9',
   red:   '#ef4444',
   amber: '#f59e0b',
 };

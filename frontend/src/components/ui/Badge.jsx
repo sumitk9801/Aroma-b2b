@@ -12,11 +12,13 @@ const variants = {
   card:     'bg-blue-50 text-blue-700 border border-blue-200',
   upi:      'bg-purple-50 text-purple-700 border border-purple-200',
   other:    'bg-gray/10 text-grayMid border border-border',
-  addition: 'bg-neon/20 text-navyDeep border border-neon/30',
+  addition: 'bg-additionGreen/15 text-navyDeep border border-additionGreen/30',
   reduction:'bg-red-50 text-red-600 border border-red-200',
   manual:   'bg-gray/10 text-grayMid border border-border',
   success:  'bg-neon/20 text-navyDeep border border-neon/30',
   danger:   'bg-red-50 text-red-600 border border-red-200',
+  sale:     'bg-saleBlue/10 text-saleBlue border border-saleBlue/30',
+  purchase: 'bg-purple-50 text-purple-700 border border-purple-200',
 };
 
 /**

@@ -211,7 +211,7 @@ export default function ReportsPage() {
                   />
                   <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                     <Cell fill="#9D9DA3" />
-                    <Cell fill="#B8ED23" />
+                    <Cell fill="#7dad3f" />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -254,7 +254,7 @@ export default function ReportsPage() {
                     labelStyle={{ color: '#5B5A6E', fontSize: '11px', marginBottom: '4px' }}
                     formatter={(v) => [`${v} units`, 'Qty Sold']}
                   />
-                  <Bar dataKey="totalQtySold" radius={[0, 6, 6, 0]} fill="#B8ED23" />
+                  <Bar dataKey="totalQtySold" radius={[0, 6, 6, 0]} fill="#7dad3f" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

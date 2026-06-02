@@ -33,7 +33,7 @@ export default function RevenueBarChart({ data = [], dataKey = 'revenue', labelK
           <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F6F6F5' }} />
           <Bar dataKey="value" radius={[6, 6, 0, 0]}>
             {chartData.map((_, i) => (
-              <Cell key={i} fill="#B8ED23" />
+              <Cell key={i} fill="#7dad3f" />
             ))}
           </Bar>
         </BarChart>
