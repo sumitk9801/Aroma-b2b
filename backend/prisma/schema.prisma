@@ -15,12 +15,14 @@ model User {
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
-  purchases        Purchase[]      @relation("UserPurchases")
-  refreshTokens    RefreshToken[]
-  sales            Sale[]          @relation("UserSales")
-  shops            Shop[]          @relation("UserShops")
-  stockAdjustments StockMovement[] @relation("UserStockMovements")
-  shopStaff        ShopStaff[]
+  purchases           Purchase[]         @relation("UserPurchases")
+  refreshTokens       RefreshToken[]
+  sales               Sale[]             @relation("UserSales")
+  shops               Shop[]             @relation("UserShops")
+  stockAdjustments    StockMovement[]    @relation("UserStockMovements")
+  shopStaff           ShopStaff[]
+  productRequests     ProductRequest[]   @relation("UserProductRequests")
+  productReviews      ProductRequest[]   @relation("UserProductReviews")
 }
 
 model BlackList {
@@ -31,6 +33,7 @@ model BlackList {
 
 model Shop {
   id               String          @id @default(uuid())
+  shopCode         Int             @unique @default(autoincrement())
   ownerId          String
   shopName         String
   businessType     String?
@@ -42,9 +45,10 @@ model Shop {
   products         Product[]
   purchases        Purchase[]
   sales            Sale[]
-  owner            User            @relation("UserShops", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner            User              @relation("UserShops", fields: [ownerId], references: [id], onDelete: Cascade)
   stockAdjustments StockMovement[]
   staff            ShopStaff[]
+  productRequests  ProductRequest[]
 }
 
 model ShopStaff {
@@ -52,6 +56,7 @@ model ShopStaff {
   shopId    String
   userId    String
   role      String   @default("staff")
+  staffId   String?  @unique
   createdAt DateTime @default(now())
   shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -86,11 +91,12 @@ model Product {
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
-  categoryRef      Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  shop             Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  categoryRef      Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  shop             Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
   purchaseItems    PurchaseItem[]
   saleItems        SaleItem[]
   stockAdjustments StockMovement[]
+  productRequests  ProductRequest[]
 }
 
 model Purchase {
@@ -167,4 +173,28 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProductRequest {
+  id             String    @id @default(uuid())
+  shopId         String
+  requestedBy    String
+  name           String
+  description    String?
+  barcodes       String?
+  suggestedPrice Float?
+  categoryHint   String?
+  quantity       Float?
+  supplierHint   String?
+  status         String    @default("PENDING")
+  reviewNote     String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  productId      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  shop           Shop      @relation(fields: [shopId],      references: [id], onDelete: Cascade)
+  requester      User      @relation("UserProductRequests", fields: [requestedBy], references: [id], onDelete: Cascade)
+  reviewer       User?     @relation("UserProductReviews",  fields: [reviewedBy],  references: [id])
+  product        Product?  @relation(fields: [productId],   references: [id])
 }

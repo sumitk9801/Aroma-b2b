@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, ClipboardList } from 'lucide-react';
 import {
   fetchProducts, deleteProduct, setFilter, setSelected, clearSelected,
   selectProducts, selectProductsLoading, selectProductFilters,
 } from '../../store/slices/productsSlice';
 import { fetchCategories, selectCategories } from '../../store/slices/categoriesSlice';
+import { selectActiveShopRole } from '../../store/slices/uiSlice';
+import { fetchPendingCount, selectPendingRequestsCount } from '../../store/slices/productRequestsSlice';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
@@ -24,10 +27,20 @@ const pageVariants = {
 
 export default function ProductsPage() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const products = useSelector(selectProducts);
   const loading = useSelector(selectProductsLoading);
   const filters = useSelector(selectProductFilters);
   const categories = useSelector(selectCategories);
+  const activeShopRole = useSelector(selectActiveShopRole);
+  const user = useSelector((s) => s.auth.user);
+  const pendingCount = useSelector(selectPendingRequestsCount);
+
+  // Prefer shop-context role, fall back to the user's global role
+  const rawRole = (activeShopRole || user?.role || 'staff').toUpperCase();
+  const normalizedRole = rawRole === 'STAFF' ? 'INVENTORY_STAFF' : rawRole;
+  const isInventoryStaff = normalizedRole === 'INVENTORY_STAFF';
+  const isManagerOrAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'MANAGER';
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
@@ -37,7 +50,8 @@ export default function ProductsPage() {
   useEffect(() => {
     dispatch(fetchProducts());
     dispatch(fetchCategories());
-  }, [dispatch]);
+    if (isManagerOrAdmin) dispatch(fetchPendingCount());
+  }, [dispatch, isManagerOrAdmin]);
 
   // Debounced search
   useEffect(() => {
@@ -177,9 +191,29 @@ export default function ProductsPage() {
         title="Products"
         subtitle={`${filteredProducts.length} products`}
         action={
-          <button onClick={openCreate} className="btn-primary">
-            <Plus size={16} /> Add Product
-          </button>
+          isInventoryStaff ? (
+            <button onClick={() => navigate('/products/requests/new')} className="btn-primary">
+              <ClipboardList size={16} /> Request Product
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              {isManagerOrAdmin && pendingCount > 0 && (
+                <button
+                  onClick={() => navigate('/products/requests')}
+                  className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                >
+                  <ClipboardList size={15} />
+                  Requests
+                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">
+                    {pendingCount}
+                  </span>
+                </button>
+              )}
+              <button onClick={openCreate} className="btn-primary">
+                <Plus size={16} /> Add Product
+              </button>
+            </div>
+          )
         }
       />
 

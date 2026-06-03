@@ -1,16 +1,21 @@
 import React, { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectMobileMenuOpen, setMobileMenuOpen } from '../../store/slices/uiSlice';
-import { fetchShops } from '../../store/slices/shopsSlice';
+import { selectMobileMenuOpen, setMobileMenuOpen, selectActiveShopId } from '../../store/slices/uiSlice';
+import { fetchShops, selectShops, selectShopsLoading } from '../../store/slices/shopsSlice';
 import { selectIsAuthenticated } from '../../store/slices/authSlice';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
 export default function AppLayout() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const mobileMenuOpen = useSelector(selectMobileMenuOpen);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const shops = useSelector(selectShops);
+  const activeShopId = useSelector(selectActiveShopId);
+  const loadingShops = useSelector(selectShopsLoading);
 
   // Load the admin's shops on app boot — this also auto-sets the active shop
   useEffect(() => {
@@ -18,6 +23,13 @@ export default function AppLayout() {
       dispatch(fetchShops());
     }
   }, [dispatch, isAuthenticated]);
+
+  // If user belongs to multiple shops and has not selected one, redirect to /select-shop
+  useEffect(() => {
+    if (isAuthenticated && !loadingShops && shops.length > 1 && !activeShopId) {
+      navigate('/select-shop');
+    }
+  }, [isAuthenticated, loadingShops, shops, activeShopId, navigate]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg">

@@ -21,7 +21,9 @@ const uiSlice = createSlice({
     mobileMenuOpen: false,
     // Active shop tracking — persisted to localStorage
     activeShopId: savedShop?.id || null,
+    activeShopCode: savedShop?.shopCode || null,
     activeShopName: savedShop?.name || '',
+    activeShopRole: savedShop?.role || '',
   },
   reducers: {
     toggleSidebar: (state) => {
@@ -37,14 +39,23 @@ const uiSlice = createSlice({
       state.mobileMenuOpen = payload;
     },
     setActiveShop: (state, { payload }) => {
-      // payload: { id, name } or null to clear
+      // payload: { id, shopCode, name, role } or null to clear
       if (payload) {
         state.activeShopId = payload.id;
+        state.activeShopCode = payload.shopCode;
         state.activeShopName = payload.name;
-        localStorage.setItem(LS_ACTIVE_SHOP_KEY, JSON.stringify({ id: payload.id, name: payload.name }));
+        state.activeShopRole = payload.role;
+        localStorage.setItem(LS_ACTIVE_SHOP_KEY, JSON.stringify({ 
+          id: payload.id, 
+          shopCode: payload.shopCode, 
+          name: payload.name, 
+          role: payload.role 
+        }));
       } else {
         state.activeShopId = null;
+        state.activeShopCode = null;
         state.activeShopName = '';
+        state.activeShopRole = '';
         localStorage.removeItem(LS_ACTIVE_SHOP_KEY);
       }
     },
@@ -62,6 +73,8 @@ export const {
 export const selectSidebarCollapsed = (state) => state.ui.sidebarCollapsed;
 export const selectMobileMenuOpen = (state) => state.ui.mobileMenuOpen;
 export const selectActiveShopId = (state) => state.ui.activeShopId;
+export const selectActiveShopCode = (state) => state.ui.activeShopCode;
 export const selectActiveShopName = (state) => state.ui.activeShopName;
+export const selectActiveShopRole = (state) => state.ui.activeShopRole;
 
 export default uiSlice.reducer;

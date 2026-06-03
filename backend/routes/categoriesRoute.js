@@ -1,7 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
-const { auth } = require("../middleware/authMiddleware");
+const { auth, checkShopContext, allowRoles } = require("../middleware/authMiddleware");
 const {
     createCategory,
     getCategories,
@@ -12,10 +12,10 @@ const {
 const validate = require("../middleware/validate");
 const { createCategorySchema, updateCategorySchema, getByIdSchema } = require("../middleware/validationSchemas");
 
-router.post("/", auth, validate(createCategorySchema), createCategory);
-router.get("/", auth, getCategories);
-router.get("/:id", auth, validate(getByIdSchema), getCategoryById);
-router.patch("/:id", auth, validate(updateCategorySchema), updateCategory);
-router.delete("/:id", auth, validate(getByIdSchema), deleteCategory);
+router.post("/", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), validate(createCategorySchema), createCategory);
+router.get("/", auth, checkShopContext, getCategories);
+router.get("/:id", auth, checkShopContext, validate(getByIdSchema), getCategoryById);
+router.patch("/:id", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), validate(updateCategorySchema), updateCategory);
+router.delete("/:id", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), validate(getByIdSchema), deleteCategory);
 
 module.exports = router;

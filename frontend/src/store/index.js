@@ -10,6 +10,7 @@ import dashboardReducer from './slices/dashboardSlice';
 import reportsReducer from './slices/reportsSlice';
 import stockMovementsReducer from './slices/stockMovementsSlice';
 import uiReducer from './slices/uiSlice';
+import productRequestsReducer from './slices/productRequestsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
     reports: reportsReducer,
     stockMovements: stockMovementsReducer,
     ui: uiReducer,
+    productRequests: productRequestsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

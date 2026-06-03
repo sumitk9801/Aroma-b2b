@@ -6,14 +6,15 @@ const registerSchema = z.object({
         name: z.string().min(2, "Name must be at least 2 characters"),
         email: z.string().email("Invalid email address"),
         password: z.string().min(6, "Password must be at least 6 characters"),
-        role: z.enum(["admin", "customer"]).optional()
+        role: z.enum(["admin"]).optional()
     })
 });
 
 const loginSchema = z.object({
     body: z.object({
         email: z.string().email("Invalid email address"),
-        password: z.string().min(1, "Password is required")
+        password: z.string().min(1, "Password is required"),
+        shopIdentifier: z.string().optional()
     })
 });
 
@@ -159,6 +160,20 @@ const adjustStockSchema = z.object({
     })
 });
 
+// Stock receiving schema (operational batch receiving)
+const receiveStockSchema = z.object({
+    body: z.object({
+        shopId: z.string().uuid("Invalid shop ID format").optional(),
+        supplierName: z.string().optional(),
+        deliveryNote: z.string().optional(),
+        items: z.array(z.object({
+            productId: z.string().uuid("Invalid product ID format"),
+            quantity: z.number().positive("Quantity must be positive")
+        })).min(1, "At least one item is required"),
+        note: z.string().optional()
+    })
+});
+
 // User schemas
 const createUserSchema = z.object({
     body: z.object({
@@ -205,6 +220,43 @@ const reportFilterSchema = z.object({
     })
 });
 
+// Product Request schemas
+const createProductRequestSchema = z.object({
+    body: z.object({
+        name: z.string().min(1, "Product name is required"),
+        description: z.string().optional(),
+        barcodes: z.string().optional(),
+        suggestedPrice: z.number().nonnegative("Price must be non-negative").optional(),
+        categoryHint: z.string().optional(),
+        quantity: z.number().positive("Quantity must be positive").optional(),
+        supplierHint: z.string().optional(),
+    })
+});
+
+const approveProductRequestSchema = z.object({
+    params: z.object({
+        id: z.string().uuid("Invalid request ID format")
+    }),
+    body: z.object({
+        categoryId: z.string().uuid("Invalid category ID format"),
+        skuCode: z.string().min(1, "SKU code is required"),
+        purchasePrice: z.number().nonnegative("Purchase price must be non-negative").optional(),
+        sellingPrice: z.number().nonnegative("Selling price must be non-negative").optional(),
+        minimumStock: z.number().nonnegative("Minimum stock must be non-negative").optional(),
+        currentStock: z.number().nonnegative("Current stock must be non-negative").optional(),
+        reviewNote: z.string().optional(),
+    })
+});
+
+const rejectProductRequestSchema = z.object({
+    params: z.object({
+        id: z.string().uuid("Invalid request ID format")
+    }),
+    body: z.object({
+        reviewNote: z.string().min(1, "A rejection reason is required"),
+    })
+});
+
 module.exports = {
     registerSchema,
     loginSchema,
@@ -219,10 +271,14 @@ module.exports = {
     getByProductSchema,
     createSaleSchema,
     adjustStockSchema,
+    receiveStockSchema,
     createUserSchema,
     updateUserSchema,
     dashboardSummarySchema,
     salesSummaryReportSchema,
-    reportFilterSchema
+    reportFilterSchema,
+    createProductRequestSchema,
+    approveProductRequestSchema,
+    rejectProductRequestSchema,
 };
 

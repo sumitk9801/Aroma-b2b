@@ -27,4 +27,15 @@ const adjustStock = async (req, res) => {
     }
 };
 
-module.exports = { getStockMovements, getStockMovementsByProduct, adjustStock };
+const receiveStock = async (req, res) => {
+    try {
+        const finalShopId = req.shopId || req.body.shopId;
+        const payload = { ...req.body, shopId: finalShopId };
+        const movements = await stockMovementService.receiveStock(payload, req.user.id);
+        res.status(200).json({ success: true, data: movements });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+};
+
+module.exports = { getStockMovements, getStockMovementsByProduct, adjustStock, receiveStock };

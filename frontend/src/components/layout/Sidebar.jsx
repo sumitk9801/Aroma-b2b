@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { NAV_ITEMS } from '../../utils/constants';
 import { selectIsAdmin, selectUser } from '../../store/slices/authSlice';
-import { selectSidebarCollapsed, toggleSidebar, selectMobileMenuOpen, setMobileMenuOpen } from '../../store/slices/uiSlice';
+import { selectSidebarCollapsed, toggleSidebar, selectMobileMenuOpen, setMobileMenuOpen, selectActiveShopRole } from '../../store/slices/uiSlice';
 import { cn } from '../../utils/cn';
 
 export default function Sidebar() {
@@ -14,6 +14,7 @@ export default function Sidebar() {
   const user = useSelector(selectUser);
   const collapsed = useSelector(selectSidebarCollapsed);
   const mobileMenuOpen = useSelector(selectMobileMenuOpen);
+  const activeShopRole = useSelector(selectActiveShopRole);
   const location = useLocation();
   const [openMenus, setOpenMenus] = useState({ Inventory: true });
   const [isMobile, setIsMobile] = useState(false);
@@ -32,7 +33,31 @@ export default function Sidebar() {
     setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const filteredNav = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const userRole = (activeShopRole || user?.role || 'staff').toUpperCase();
+  const normalizedRole = userRole === 'STAFF' ? 'INVENTORY_STAFF' : userRole;
+
+  const filteredNav = NAV_ITEMS.filter((item) => {
+    const label = item.label;
+
+    if (normalizedRole === 'ADMIN') {
+      return true;
+    }
+    if (normalizedRole === 'MANAGER') {
+      return label !== 'Reports' && label !== 'Shops';
+    }
+    if (normalizedRole === 'CASHIER') {
+      return label === 'Dashboard' || label === 'Sales';
+    }
+    if (normalizedRole === 'INVENTORY_STAFF') {
+      return (
+        label === 'Dashboard' ||
+        label === 'Products' ||
+        label === 'Product Requests' ||
+        label === 'Inventory'
+      );
+    }
+    return false;
+  });
 
   const isActive = (path) => location.pathname === path;
   const isParentActive = (item) =>
@@ -255,7 +280,7 @@ export default function Sidebar() {
               className="flex-1 overflow-hidden"
             >
               <p className="text-white text-sm font-medium truncate">{user?.name || 'User'}</p>
-              <p className="text-grayLight text-xs truncate">{user?.role || 'customer'}</p>
+              <p className="text-grayLight text-xs truncate capitalize">{normalizedRole.toLowerCase().replace('_', ' ')}</p>
             </motion.div>
           )}
         </AnimatePresence>

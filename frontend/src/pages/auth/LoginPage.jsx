@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Store } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser, selectAuth, clearError } from '../../store/slices/authSlice';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { cn } from '../../utils/cn';
 const schema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  shopIdentifier: z.string().optional(),
 });
 
 const floatingShapes = [
@@ -191,6 +192,23 @@ export default function LoginPage() {
                   </button>
                 </div>
                 {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+              </div>
+
+              {/* Shop Name or ID */}
+              <div>
+                <label className="block text-sm font-medium text-navy mb-1.5 flex items-center justify-between">
+                  <span>Shop Name or ID</span>
+                  <span className="text-grayLight font-normal text-[10px] lowercase italic">(required only for staff)</span>
+                </label>
+                <div className="relative">
+                  <Store size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-grayMid" />
+                  <input
+                    {...register('shopIdentifier')}
+                    type="text"
+                    placeholder="e.g. mistan bhandar, 1, or shop-uuid"
+                    className="input-base !pl-10"
+                  />
+                </div>
               </div>
 
               <button

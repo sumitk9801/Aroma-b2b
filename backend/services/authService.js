@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const register = async (userData) => {
-    const { name, email, password, role } = userData;
+    const { name, email, password } = userData;
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
         throw new Error("User already exists");
@@ -14,7 +14,7 @@ const register = async (userData) => {
             name,
             email,
             password: hashedPassword,
-            role: role || "customer"
+            role: "admin"
         },
         select: { id: true, name: true, email: true, role: true, isActive: true }
     });
@@ -22,7 +22,7 @@ const register = async (userData) => {
 };
 
 const login = async (loginData) => {
-    const { email, password } = loginData;
+    const { email, password, shopIdentifier } = loginData;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
         throw new Error("Invalid email or password");
@@ -30,6 +30,41 @@ const login = async (loginData) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         throw new Error("Invalid email or password");
+    }
+
+    let assignedShop = null;
+
+    // Verify shop assignment and Shop Name/ID for non-admin staff users
+    if (user.role !== "admin") {
+        if (!shopIdentifier) {
+            throw new Error("Shop Name or Shop ID is required for staff members");
+        }
+        
+        // Find all staff assignments for this user
+        const staffAssignments = await prisma.shopStaff.findMany({
+            where: { userId: user.id },
+            include: { shop: true }
+        });
+        
+        // Find a matching assignment where the shop ID matches, or the shop name matches case-insensitively, or the numeric shop code matches
+        const cleanIdentifier = shopIdentifier.trim().toLowerCase();
+        const matchedAssignment = staffAssignments.find(sa => {
+            const shopIdMatch = sa.shopId.toLowerCase() === cleanIdentifier;
+            const shopNameMatch = sa.shop.shopName.toLowerCase() === cleanIdentifier;
+            const shopCodeMatch = String(sa.shop.shopCode) === cleanIdentifier;
+            return shopIdMatch || shopNameMatch || shopCodeMatch;
+        });
+        
+        if (!matchedAssignment) {
+            throw new Error("You are not registered as a staff member of the specified shop Name or ID");
+        }
+
+        assignedShop = {
+            id: matchedAssignment.shopId,
+            shopCode: matchedAssignment.shop.shopCode,
+            name: matchedAssignment.shop.shopName || matchedAssignment.shop.name,
+            role: matchedAssignment.role
+        };
     }
     
     // Access token (3 days)
@@ -58,7 +93,8 @@ const login = async (loginData) => {
     return {
         token,
         refreshToken,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role }
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        assignedShop
     };
 };
 

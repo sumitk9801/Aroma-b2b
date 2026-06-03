@@ -6,7 +6,7 @@ import { Bell, ChevronDown, LogOut, Store, Menu, Check, Building2 } from 'lucide
 import { selectUser } from '../../store/slices/authSlice';
 import { selectDashboardLowStock } from '../../store/slices/dashboardSlice';
 import { logoutUser } from '../../store/slices/authSlice';
-import { selectMobileMenuOpen, toggleMobileMenu, selectActiveShopId, selectActiveShopName, setActiveShop } from '../../store/slices/uiSlice';
+import { selectMobileMenuOpen, toggleMobileMenu, selectActiveShopId, selectActiveShopCode, selectActiveShopName, setActiveShop, selectActiveShopRole } from '../../store/slices/uiSlice';
 import { selectShops } from '../../store/slices/shopsSlice';
 import { clearUsers } from '../../store/slices/usersSlice';
 import { NAV_ITEMS } from '../../utils/constants';
@@ -41,7 +41,12 @@ export default function TopBar() {
   const lowStock = useSelector(selectDashboardLowStock);
   const shops = useSelector(selectShops);
   const activeShopId = useSelector(selectActiveShopId);
+  const activeShopCode = useSelector(selectActiveShopCode);
   const activeShopName = useSelector(selectActiveShopName);
+  const activeShopRole = useSelector(selectActiveShopRole);
+
+  const userRole = (activeShopRole || user?.role || '').toUpperCase();
+  const isAdmin = userRole === 'ADMIN';
 
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [shopDropdownOpen, setShopDropdownOpen] = useState(false);
@@ -72,7 +77,7 @@ export default function TopBar() {
   };
 
   const handleShopSwitch = (shop) => {
-    dispatch(setActiveShop({ id: shop.id, name: shop.shopName || shop.name }));
+    dispatch(setActiveShop({ id: shop.id, shopCode: shop.shopCode, name: shop.shopName || shop.name, role: shop.role }));
     dispatch(clearUsers()); // Clear users list so it reloads for the new shop
     setShopDropdownOpen(false);
     toast.success(`Switched to ${shop.shopName || shop.name}`);
@@ -112,17 +117,22 @@ export default function TopBar() {
         {/* Shop Switcher */}
         <div className="relative hidden sm:block" ref={shopDropdownRef}>
           <button
-            onClick={() => setShopDropdownOpen(!shopDropdownOpen)}
+            onClick={() => shops.length > 0 && setShopDropdownOpen(!shopDropdownOpen)}
             className={cn(
               'flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-all duration-200',
               shopDropdownOpen
                 ? 'bg-navy/10 border-navy/20'
-                : 'bg-navy/5 border-border hover:bg-navy/8 hover:border-navy/15'
+                : 'bg-navy/5 border-border hover:bg-navy/8 hover:border-navy/15',
+              shops.length === 0 && 'cursor-default opacity-85 hover:bg-navy/5 hover:border-border'
             )}
           >
             <Store size={13} className="text-neon flex-shrink-0" />
             <span className="text-xs font-semibold text-navy max-w-[140px] truncate">
-              {activeShopName || 'Select Shop'}
+              {shops.length === 0 
+                ? 'No Shop' 
+                : activeShopName 
+                  ? `${activeShopName}${activeShopCode ? ` (#${activeShopCode})` : ''}` 
+                  : 'Select Shop'}
             </span>
             {shops.length > 1 && (
               <ChevronDown
@@ -169,7 +179,7 @@ export default function TopBar() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className={cn('text-sm font-medium truncate', isActive && 'text-navy')}>
-                            {shop.shopName || shop.name}
+                            {shop.shopName || shop.name} {shop.shopCode ? `(#${shop.shopCode})` : ''}
                           </p>
                           {shop.businessType && (
                             <p className="text-xs text-grayMid truncate">{shop.businessType}</p>
@@ -182,17 +192,19 @@ export default function TopBar() {
                 </div>
 
                 {/* Footer hint */}
-                <div className="px-4 py-2 border-t border-border bg-bg/30">
-                  <p className="text-xs text-grayMid">
-                    Manage shops in{' '}
-                    <button
-                      onClick={() => { setShopDropdownOpen(false); navigate('/shops'); }}
-                      className="text-neon font-medium hover:underline"
-                    >
-                      Shops
-                    </button>
-                  </p>
-                </div>
+                {isAdmin && (
+                  <div className="px-4 py-2 border-t border-border bg-bg/30">
+                    <p className="text-xs text-grayMid">
+                      Manage shops in{' '}
+                      <button
+                        onClick={() => { setShopDropdownOpen(false); navigate('/shops'); }}
+                        className="text-neon font-medium hover:underline"
+                      >
+                        Shops
+                      </button>
+                    </p>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

@@ -105,7 +105,18 @@ export default function UsersPage() {
     } else {
       // Inject active shopId into the payload
       result = await dispatch(createUser({ ...data, shopId: activeShopId }));
-      if (createUser.fulfilled.match(result)) { toast.success('Staff member added!'); closeDrawer(); }
+      if (createUser.fulfilled.match(result)) {
+        const createdUser = result.payload?.data || result.payload;
+        const generatedId = createdUser?.staffId || '—';
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-navy">Staff member added!</span>
+            <span className="text-xs text-grayMid">Generated Staff ID: <strong className="font-mono text-neon bg-navy/10 px-1 py-0.5 rounded select-all">{generatedId}</strong></span>
+          </div>,
+          { duration: 6000 }
+        );
+        closeDrawer();
+      }
       else toast.error(result.payload || 'Failed to create');
     }
   };
@@ -143,6 +154,10 @@ export default function UsersPage() {
     {
       key: 'email', label: 'Email',
       render: (v) => <span className="text-grayMid text-sm">{v}</span>,
+    },
+    {
+      key: 'staffId', label: 'Staff ID',
+      render: (v) => <span className="font-mono text-xs font-semibold text-navy bg-navy/5 px-2 py-1 rounded select-all">{v || '—'}</span>,
     },
     {
       key: 'shopRole', label: 'Shop Role',

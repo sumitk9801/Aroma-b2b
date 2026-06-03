@@ -20,6 +20,7 @@ const reportsRoute = require("./routes/reportsRoute");
 const dashboardRoute = require("./routes/dashboardRoute");
 const uploadsRoute = require("./routes/uploadsRoute");
 const healthRoute = require("./routes/healthRoute");
+const productRequestRoute = require("./routes/productRequestRoute");
 
 
 // Rate limiters to protect DB and server resources
@@ -36,7 +37,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 25, // Strict limit for auth/login/register to prevent brute-force attacks
+    max: 1000, // Strict limit for auth/login/register to prevent brute-force attacks
     message: {
         success: false,
         message: "Too many authentication requests, please try again after 15 minutes"
@@ -85,6 +86,7 @@ app.use("/api/v1/users", usersRoute);
 app.use("/api/v1/shops", shopRoute);
 app.use("/api/v1/categories", categoriesRoute);
 app.use("/api/v1/products", productRoute);
+app.use("/api/v1/product-requests", productRequestRoute);
 app.use("/api/v1/purchases", purchasesRoute);
 app.use("/api/v1/sales", salesRoute);
 app.use("/api/v1/stock-movements", stockMovementsRoute);

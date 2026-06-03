@@ -15,7 +15,6 @@ const schema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
-  role: z.enum(['admin', 'customer']),
 }).refine((d) => d.password === d.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -29,14 +28,13 @@ export default function RegisterPage() {
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { role: 'customer' },
   });
 
   useEffect(() => { dispatch(clearError()); }, [dispatch]);
 
   const onSubmit = async (data) => {
     const { confirmPassword, ...payload } = data;
-    const result = await dispatch(registerUser(payload));
+    const result = await dispatch(registerUser({ ...payload, role: 'admin' }));
     if (registerUser.fulfilled.match(result)) {
       toast.success('Account created! Please sign in.');
       navigate('/login');
@@ -128,13 +126,7 @@ export default function RegisterPage() {
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-navy mb-1.5">Role <span className="text-red-500">*</span></label>
-                <select {...register('role')} className="input-base">
-                  <option value="customer">Customer</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-navy mb-1.5">Password <span className="text-red-500">*</span></label>

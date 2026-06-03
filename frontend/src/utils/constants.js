@@ -11,12 +11,14 @@ import {
   Store,
   BarChart3,
   Users,
+  ClipboardList,
 } from 'lucide-react';
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 export const NAV_ITEMS = [
-  { label: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Products',   icon: Package,         path: '/products' },
+  { label: 'Dashboard',        icon: LayoutDashboard, path: '/dashboard' },
+  { label: 'Products',          icon: Package,         path: '/products' },
+  { label: 'Product Requests',  icon: ClipboardList,   path: '/products/requests' },
   {
     label: 'Inventory',
     icon: Warehouse,
@@ -25,6 +27,7 @@ export const NAV_ITEMS = [
       { label: 'Stock Movements', icon: ArrowLeftRight,    path: '/inventory/movements' },
       { label: 'Low Stock',       icon: AlertTriangle,     path: '/inventory/low-stock' },
       { label: 'Adjust Stock',    icon: SlidersHorizontal, path: '/inventory/adjust' },
+      { label: 'Stock Receiving', icon: Truck,             path: '/inventory/receiving' },
     ],
   },
   { label: 'Sales',      icon: ShoppingCart, path: '/sales' },

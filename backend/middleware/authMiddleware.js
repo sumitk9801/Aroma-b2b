@@ -25,11 +25,77 @@ const auth = async (req, res, next) => {
     }
 };
 
+const normalizeRole = (role) => {
+    if (!role) return "";
+    const r = role.toUpperCase();
+    if (r === "STAFF") return "INVENTORY_STAFF";
+    return r;
+};
+
+const checkShopContext = async (req, res, next) => {
+    try {
+        const shopId = req.headers["x-shop-id"] || req.query.shopId || req.body.shopId;
+        
+        if (shopId) {
+            const shop = await prisma.shop.findUnique({
+                where: { id: shopId }
+            });
+            
+            if (!shop) {
+                return res.status(404).json({ success: false, message: "Shop not found" });
+            }
+            
+            if (shop.ownerId === req.user.id) {
+                req.user.shopRole = "ADMIN";
+                req.shopId = shopId;
+                return next();
+            }
+            
+            const staff = await prisma.shopStaff.findUnique({
+                where: {
+                    shopId_userId: {
+                        shopId,
+                        userId: req.user.id
+                    }
+                }
+            });
+            
+            if (!staff) {
+                return res.status(403).json({ success: false, message: "Forbidden: You do not belong to this shop" });
+            }
+            
+            req.user.shopRole = staff.role.toUpperCase();
+            req.shopId = shopId;
+        } else {
+            req.user.shopRole = req.user.role ? req.user.role.toUpperCase() : "STAFF";
+        }
+        next();
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+const allowRoles = (...allowedRoles) => {
+    return (req, res, next) => {
+        const userRole = normalizeRole(req.user?.shopRole || req.user?.role);
+        const normalizedAllowed = allowedRoles.map(normalizeRole);
+        
+        if (!normalizedAllowed.includes(userRole)) {
+            return res.status(403).json({
+                success: false,
+                message: "Forbidden: You do not have permission to access this resource"
+            });
+        }
+        next();
+    };
+};
+
 const authorize = (req,res,next)=>{
-    if(req.user.role!="admin"){
+    if (req.user.role !== "admin" && req.user.role !== "manager") {
         return res.status(403).json({ message: "Forbidden: You don't have permission to access this resource" });
     }
     next();
 };
-module.exports = { auth, authorize };
+
+module.exports = { auth, authorize, checkShopContext, allowRoles, normalizeRole };
 

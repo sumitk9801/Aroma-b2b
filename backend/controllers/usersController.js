@@ -10,14 +10,24 @@ const verifyShopOwnership = async (res, userId, shopId) => {
         res.status(400).json({ success: false, message: "shopId is required" });
         return false;
     }
+    // Verify if the user is the owner of the shop
     const shop = await prisma.shop.findFirst({
         where: { id: shopId, ownerId: userId }
     });
-    if (!shop) {
-        res.status(403).json({ success: false, message: "You do not have access to this shop" });
-        return false;
-    }
-    return true;
+    if (shop) return true;
+
+    // Verify if the user is an admin or manager in the shop's staff list
+    const staff = await prisma.shopStaff.findFirst({
+        where: {
+            shopId,
+            userId,
+            role: { in: ["admin", "manager"] }
+        }
+    });
+    if (staff) return true;
+
+    res.status(403).json({ success: false, message: "You do not have access to this shop" });
+    return false;
 };
 
 const getUsers = async (req, res) => {

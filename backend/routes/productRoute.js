@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { auth } = require("../middleware/authMiddleware");
+const { auth, checkShopContext, allowRoles } = require("../middleware/authMiddleware");
 const {
     createProduct,
     getProducts,
@@ -12,12 +12,12 @@ const {
 const validate = require("../middleware/validate");
 const { createProductSchema, updateProductSchema, getByIdSchema } = require("../middleware/validationSchemas");
 
-router.post("/", auth, validate(createProductSchema), createProduct);
-router.get("/", auth, getProducts);
-router.get("/low-stock", auth, getLowStockProducts);
-router.get("/:id", auth, validate(getByIdSchema), getProductById);
-router.patch("/:id", auth, validate(updateProductSchema), updateProduct);
-router.delete("/:id", auth, validate(getByIdSchema), deleteProduct);
+router.post("/", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), validate(createProductSchema), createProduct);
+router.get("/", auth, checkShopContext, getProducts);
+router.get("/low-stock", auth, checkShopContext, getLowStockProducts);
+router.get("/:id", auth, checkShopContext, validate(getByIdSchema), getProductById);
+router.patch("/:id", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), validate(updateProductSchema), updateProduct);
+router.delete("/:id", auth, checkShopContext, allowRoles("ADMIN"), validate(getByIdSchema), deleteProduct);
 
 module.exports = router;
     

@@ -2,16 +2,20 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authApi } from '../../api/auth.api';
 import { LS_TOKEN_KEY } from '../../utils/constants';
 import { getErrorMessage } from '../../api/client';
+import { setActiveShop } from './uiSlice';
 
 // ─── Async Thunks ─────────────────────────────────────────────────────────────
 
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async (credentials, { rejectWithValue }) => {
+  async (credentials, { dispatch, rejectWithValue }) => {
     try {
       const res = await authApi.login(credentials);
-      const { token, user } = res.data.data || res.data;
+      const { token, user, assignedShop } = res.data.data || res.data;
       localStorage.setItem(LS_TOKEN_KEY, token);
+      if (assignedShop) {
+        dispatch(setActiveShop(assignedShop));
+      }
       return { token, user };
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));

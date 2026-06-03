@@ -77,4 +77,63 @@ const adjustStock = async (adjustmentData, userId) => {
     });
 };
 
-module.exports = { getAllStockMovements, getStockMovementsByProduct, adjustStock };
+const receiveStock = async (receiveData, userId) => {
+    const { shopId, supplierName, deliveryNote, items, note } = receiveData;
+    if (!items || items.length === 0) {
+        throw new Error("Items are required");
+    }
+
+    return await prisma.$transaction(async (tx) => {
+        const movements = [];
+
+        for (const item of items) {
+            const product = await tx.product.findUnique({ where: { id: item.productId } });
+            if (!product) {
+                throw new Error(`Product not found: ${item.productId}`);
+            }
+
+            const change = parseFloat(item.quantity);
+            const newStock = product.currentStock + change;
+
+            // Update product stock
+            await tx.product.update({
+                where: { id: item.productId },
+                data: { currentStock: newStock }
+            });
+
+            const finalShopId = shopId || product.shopId;
+
+            // Generate detailed note
+            let detailedNote = `Received ${change} units of ${product.name} from supplier: ${supplierName || "N/A"}`;
+            if (note) {
+                detailedNote += `. Note: ${note}`;
+            }
+
+            // Create movement record
+            const movement = await tx.stockMovement.create({
+                data: {
+                    shopId: finalShopId,
+                    productId: item.productId,
+                    type: "addition",
+                    quantity: change,
+                    previousStock: product.currentStock,
+                    newStock,
+                    referenceType: "receiving",
+                    referenceId: deliveryNote || null,
+                    note: detailedNote,
+                    createdBy: userId
+                },
+                include: {
+                    product: { select: { id: true, name: true, skuCode: true } },
+                    creator: { select: { id: true, name: true } }
+                }
+            });
+
+            movements.push(movement);
+        }
+
+        return movements;
+    });
+};
+
+module.exports = { getAllStockMovements, getStockMovementsByProduct, adjustStock, receiveStock };

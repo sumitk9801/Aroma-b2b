@@ -18,10 +18,12 @@ const createShop = async (shopData, ownerId) => {
             data: { shopName: finalShopName, businessType, address, phone, ownerId }
         });
 
+        const staffId = "STF-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
         // Auto-add the owner as an admin staff member of their own shop
         await tx.shopStaff.upsert({
             where: { shopId_userId: { shopId: newShop.id, userId: ownerId } },
-            create: { shopId: newShop.id, userId: ownerId, role: "admin" },
+            create: { shopId: newShop.id, userId: ownerId, role: "admin", staffId },
             update: {}
         });
 
@@ -31,12 +33,29 @@ const createShop = async (shopData, ownerId) => {
     return mapShop(shop);
 };
 
-const getAllShops = async (ownerId) => {
+const getAllShops = async (userId) => {
     const shops = await prisma.shop.findMany({
-        where: ownerId ? { ownerId } : undefined,
-        include: { owner: { select: { id: true, name: true, email: true } } }
+        where: userId ? {
+            OR: [
+                { ownerId: userId },
+                { staff: { some: { userId } } }
+            ]
+        } : undefined,
+        include: {
+            owner: { select: { id: true, name: true, email: true } },
+            staff: userId ? {
+                where: { userId }
+            } : undefined
+        }
     });
-    return shops.map(mapShop);
+    return shops.map(shop => {
+        const staffEntry = shop.staff?.find(s => s.userId === userId);
+        const mapped = mapShop(shop);
+        return {
+            ...mapped,
+            role: staffEntry ? staffEntry.role : (shop.ownerId === userId ? "admin" : "staff")
+        };
+    });
 };
 
 const getShopById = async (id) => {

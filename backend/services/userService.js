@@ -49,6 +49,7 @@ const getAllUsers = async (shopId) => {
         ...entry.user,
         shopRole: entry.role,
         shopStaffId: entry.id,
+        staffId: entry.staffId,
         isOwner: entry.user.id === shop.ownerId
     }));
 };
@@ -75,6 +76,8 @@ const createUser = async (userData) => {
         throw new Error("shopId is required when creating a staff member");
     }
 
+    const generateStaffId = () => "STF-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
         // If user already exists, just add them to this shop if not already a member
@@ -84,10 +87,11 @@ const createUser = async (userData) => {
         if (alreadyInShop) {
             throw new Error("This user is already a staff member of this shop");
         }
-        await prisma.shopStaff.create({
-            data: { shopId, userId: existing.id, role: role || "staff" }
+        const staffId = generateStaffId();
+        const staffEntry = await prisma.shopStaff.create({
+            data: { shopId, userId: existing.id, role: role || "staff", staffId }
         });
-        return { ...existing, shopRole: role || "staff" };
+        return { ...existing, shopRole: role || "staff", staffId: staffEntry.staffId };
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -104,11 +108,12 @@ const createUser = async (userData) => {
             select: { id: true, name: true, email: true, role: true, isActive: true }
         });
 
+        const staffId = generateStaffId();
         const staffEntry = await tx.shopStaff.create({
-            data: { shopId, userId: user.id, role: role || "staff" }
+            data: { shopId, userId: user.id, role: role || "staff", staffId }
         });
 
-        return { ...user, shopRole: staffEntry.role };
+        return { ...user, shopRole: staffEntry.role, staffId: staffEntry.staffId };
     });
 
     return result;

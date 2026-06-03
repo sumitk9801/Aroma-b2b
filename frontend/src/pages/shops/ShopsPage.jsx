@@ -58,6 +58,10 @@ export default function ShopsPage() {
 
   const columns = [
     {
+      key: 'shopCode', label: 'Shop ID', sortable: true,
+      render: (v) => <span className="font-mono font-bold text-navy bg-navy/5 px-2 py-1 rounded text-xs">#{v}</span>
+    },
+    {
       key: 'name', label: 'Shop Name', sortable: true,
       render: (v) => (
         <div className="flex items-center gap-2">
