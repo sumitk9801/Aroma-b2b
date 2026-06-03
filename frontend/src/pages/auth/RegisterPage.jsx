@@ -90,9 +90,9 @@ export default function RegisterPage() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-md"
         >
-          <div className="flex lg:hidden items-center gap-2 mb-8">
-            <div className="w-9 h-9 overflow-hidden flex items-center justify-center bg-transparent">
-              <img src="/favicon.png" alt="Aroma B2B" className="w-full h-full object-contain scale-[4]" />
+          <div className="flex lg:hidden items-center gap-2 mb-5">
+            <div className="w-14 h-14 overflow-hidden flex items-center justify-center bg-transparent">
+              <img src="/favicon.png" alt="Aroma B2B" className="w-full h-full object-contain scale-[3]" />
             </div>
             <span className="font-display font-bold text-navy text-xl">Aroma B2B</span>
           </div>
