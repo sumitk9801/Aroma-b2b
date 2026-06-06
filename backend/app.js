@@ -59,8 +59,7 @@ app.use(cors({ // allow cross origin requests and responses from different domai
     origin: ["http://localhost:5173", "http://localhost:5174"],    
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With']
-
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'x-shop-id']
 }));
 
 // Mount the centralized request monitoring logger middleware

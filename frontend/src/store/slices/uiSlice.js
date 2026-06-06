@@ -60,6 +60,15 @@ const uiSlice = createSlice({
       }
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase('auth/logout/fulfilled', (state) => {
+      state.activeShopId = null;
+      state.activeShopCode = null;
+      state.activeShopName = '';
+      state.activeShopRole = '';
+      localStorage.removeItem(LS_ACTIVE_SHOP_KEY);
+    });
+  },
 });
 
 export const {

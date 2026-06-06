@@ -6,6 +6,7 @@ import { fetchShops, selectShops, selectShopsLoading } from '../../store/slices/
 import { selectIsAuthenticated } from '../../store/slices/authSlice';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import { useRefundSocket } from '../../utils/socket';
 
 export default function AppLayout() {
   const dispatch = useDispatch();
@@ -16,6 +17,8 @@ export default function AppLayout() {
   const shops = useSelector(selectShops);
   const activeShopId = useSelector(selectActiveShopId);
   const loadingShops = useSelector(selectShopsLoading);
+
+  useRefundSocket();
 
   // Load the admin's shops on app boot — this also auto-sets the active shop
   useEffect(() => {

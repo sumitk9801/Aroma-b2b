@@ -26,7 +26,7 @@ const setRefreshTokenCookie = (res, token) => {
 const login = async (req, res) => {
     try {
         const result = await authService.login(req.body);
-        const { token, refreshToken, user } = result;
+        const { token, refreshToken, user, assignedShop } = result;
         
         // Set HTTP-only cookie
         setRefreshTokenCookie(res, refreshToken);
@@ -34,7 +34,7 @@ const login = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "User logged in successfully",
-            data: { token, user }
+            data: { token, user, assignedShop }
         });
     } catch (err) {
         const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || req.ip;

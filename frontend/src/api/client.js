@@ -33,6 +33,19 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    try {
+      const activeShop = localStorage.getItem('aroma_active_shop');
+      if (activeShop) {
+        const { id } = JSON.parse(activeShop);
+        if (id) {
+          config.headers['x-shop-id'] = id;
+        }
+      }
+    } catch (e) {
+      // Ignore JSON parsing errors
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

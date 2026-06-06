@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
+import { getSocket } from '../../utils/socket';
 import { useNavigate } from 'react-router-dom';
 import {
   Package, TrendingUp, ShoppingCart, Truck, AlertTriangle, Grid3X3,
@@ -65,7 +66,7 @@ export default function DashboardPage() {
     case 'ADMIN':
       return <AdminDashboard activeShopName={activeShopName} />;
     case 'MANAGER':
-      return <ManagerDashboard activeShopName={activeShopName} />;
+      return <ManagerDashboard activeShopId={activeShopId} activeShopName={activeShopName} />;
     case 'CASHIER':
       return <CashierDashboard activeShopId={activeShopId} activeShopName={activeShopName} />;
     case 'INVENTORY_STAFF':
@@ -219,15 +220,28 @@ function AdminDashboard({ activeShopName }) {
 }
 
 // ─── 2. MANAGER DASHBOARD ─────────────────────────────────────────────────────
-function ManagerDashboard({ activeShopName }) {
+function ManagerDashboard({ activeShopId, activeShopName }) {
   const summary = useSelector(selectDashboardSummary);
   const loading = useSelector(selectDashboardLoading);
   const lowStock = useSelector(selectDashboardLowStock);
 
-  const [refunds, setRefunds] = useState([
-    { id: 'REF-042', amount: 45.00, items: 'Aroma Perfume Oil x1', cashier: 'Sarah M.', date: '10m ago' },
-    { id: 'REF-043', amount: 18.50, items: 'Vanilla Extract x2', cashier: 'Alex W.', date: '40m ago' },
-  ]);
+  const [refunds, setRefunds] = useState([]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.on('refund-list-update', (updatedList) => {
+      setRefunds(updatedList);
+    });
+
+    // Request initial list sync
+    socket.emit('join-shop', activeShopId);
+
+    return () => {
+      socket.off('refund-list-update');
+    };
+  }, [activeShopId]);
 
   const activeCashiers = [
     { id: 1, name: 'Sarah Miller', shift: '2h 15m', sales: '$240.00', status: 'active' },
@@ -236,11 +250,13 @@ function ManagerDashboard({ activeShopName }) {
   ];
 
   const handleRefund = (id, approved) => {
-    setRefunds((prev) => prev.filter((r) => r.id !== id));
-    if (approved) {
-      toast.success(`Refund ${id} Approved!`);
-    } else {
-      toast.error(`Refund ${id} Rejected.`);
+    const socket = getSocket();
+    if (socket && activeShopId) {
+      if (approved) {
+        socket.emit('approve-refund', { shopId: activeShopId, refundId: id });
+      } else {
+        socket.emit('reject-refund', { shopId: activeShopId, refundId: id });
+      }
     }
   };
 
@@ -380,11 +396,18 @@ function ManagerDashboard({ activeShopName }) {
 function CashierDashboard({ activeShopId, activeShopName }) {
   const dispatch = useDispatch();
   const products = useSelector(selectProducts);
+  const user = useSelector(selectUser);
+
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [submitting, setSubmitting] = useState(false);
+
+  // Refund panel states
+  const [rightPanel, setRightPanel] = useState('cart'); // 'cart' or 'refund'
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [refunds, setRefunds] = useState([]);
 
   // Shift Mocks
   const [shiftStart] = useState(new Date());
@@ -404,6 +427,23 @@ function CashierDashboard({ activeShopId, activeShopName }) {
     }, 1000);
     return () => clearInterval(timer);
   }, [shiftStart]);
+
+  // Sync refunds list
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.on('refund-list-update', (updatedList) => {
+      setRefunds(updatedList);
+    });
+
+    // Request initial list sync
+    socket.emit('join-shop', activeShopId);
+
+    return () => {
+      socket.off('refund-list-update');
+    };
+  }, [activeShopId]);
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery) return products.slice(0, 15);
@@ -466,6 +506,21 @@ function CashierDashboard({ activeShopId, activeShopName }) {
       setCustomerName('');
     } else {
       toast.error(result.payload || 'Failed to record sale');
+    }
+  };
+
+  const handleRequestRefund = (amount, items) => {
+    const socket = getSocket();
+    if (socket && activeShopId) {
+      socket.emit('request-refund', {
+        shopId: activeShopId,
+        cashier: user?.name || 'Cashier',
+        amount,
+        items
+      });
+      toast.success('Refund request submitted to manager!');
+    } else {
+      toast.error('Socket connection offline. Could not submit request.');
     }
   };
 
@@ -549,78 +604,149 @@ function CashierDashboard({ activeShopId, activeShopName }) {
         {/* POS Cart Summary */}
         <div className="lg:col-span-2 space-y-4">
           <div className="card space-y-4">
-            <h3 className="font-display font-semibold text-navy">Checkout Cart</h3>
-
-            {/* Cart list */}
-            <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin">
-              {cart.length === 0 ? (
-                <div className="text-center py-12 text-gray text-xs">
-                  <ShoppingCart size={20} className="mx-auto mb-2 text-grayLight" />
-                  Select products from the left to start billing.
-                </div>
-              ) : (
-                cart.map((item) => (
-                  <div key={item.productId} className="flex items-center gap-2 p-2 bg-bg rounded-xl border border-border">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-navy truncate">{item.name}</p>
-                      <p className="text-xs font-bold text-neon">{formatCurrency(item.unitPrice)}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => updateQty(item.productId, -1)} className="w-5.5 h-5.5 rounded bg-white border border-border flex items-center justify-center hover:bg-red-50">
-                        <Minus size={8} />
-                      </button>
-                      <span className="w-5 text-center text-xs font-bold text-navy">{item.quantity}</span>
-                      <button onClick={() => updateQty(item.productId, 1)} className="w-5.5 h-5.5 rounded bg-white border border-border flex items-center justify-center hover:bg-neon/20">
-                        <Plus size={8} />
-                      </button>
-                    </div>
-                    <button onClick={() => removeFromCart(item.productId)} className="text-grayMid hover:text-red-500 p-1">
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))
+            {/* Header with Tabs */}
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setRightPanel('cart')}
+                  className={cn(
+                    'font-display font-semibold text-sm pb-1.5 border-b-2 transition-all',
+                    rightPanel === 'cart' ? 'text-navy border-neon' : 'text-grayLight border-transparent'
+                  )}
+                >
+                  Checkout Cart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRightPanel('refund')}
+                  className={cn(
+                    'font-display font-semibold text-sm pb-1.5 border-b-2 transition-all',
+                    rightPanel === 'refund' ? 'text-navy border-neon' : 'text-grayLight border-transparent'
+                  )}
+                >
+                  Refund Requests
+                </button>
+              </div>
+              {rightPanel === 'cart' && cart.length > 0 && (
+                <span className="badge-neon text-[10px]">{cart.length} items</span>
               )}
             </div>
 
-            {/* Customer */}
-            <input
-              type="text"
-              placeholder="Customer Name (Walk-in)"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="input-base text-xs py-2"
-            />
-
-            {/* Payment Method */}
-            <div className="grid grid-cols-3 gap-1.5">
-              {['cash', 'card', 'upi'].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setPaymentMethod(m)}
-                  className={cn(
-                    'py-1.5 rounded-lg text-[10px] font-bold uppercase border tracking-wider transition-all',
-                    paymentMethod === m ? 'bg-navy text-white border-navy' : 'bg-white border-border text-grayMid'
+            {rightPanel === 'cart' ? (
+              <>
+                {/* Cart list */}
+                <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin">
+                  {cart.length === 0 ? (
+                    <div className="text-center py-12 text-gray text-xs">
+                      <ShoppingCart size={20} className="mx-auto mb-2 text-grayLight" />
+                      Select products from the left to start billing.
+                    </div>
+                  ) : (
+                    cart.map((item) => (
+                      <div key={item.productId} className="flex items-center gap-2 p-2 bg-bg rounded-xl border border-border">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-navy truncate">{item.name}</p>
+                          <p className="text-xs font-bold text-neon">{formatCurrency(item.unitPrice)}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => updateQty(item.productId, -1)} className="w-5.5 h-5.5 rounded bg-white border border-border flex items-center justify-center hover:bg-red-50">
+                            <Minus size={8} />
+                          </button>
+                          <span className="w-5 text-center text-xs font-bold text-navy">{item.quantity}</span>
+                          <button onClick={() => updateQty(item.productId, 1)} className="w-5.5 h-5.5 rounded bg-white border border-border flex items-center justify-center hover:bg-neon/20">
+                            <Plus size={8} />
+                          </button>
+                        </div>
+                        <button onClick={() => removeFromCart(item.productId)} className="text-grayMid hover:text-red-500 p-1">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))
                   )}
+                </div>
+
+                {/* Customer */}
+                <input
+                  type="text"
+                  placeholder="Customer Name (Walk-in)"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="input-base text-xs py-2"
+                />
+
+                {/* Payment Method */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['cash', 'card', 'upi'].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setPaymentMethod(m)}
+                      className={cn(
+                        'py-1.5 rounded-lg text-[10px] font-bold uppercase border tracking-wider transition-all',
+                        paymentMethod === m ? 'bg-navy text-white border-navy' : 'bg-white border-border text-grayMid'
+                      )}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Total */}
+                <div className="border-t border-border pt-3 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-grayMid">Total Billing</span>
+                  <span className="font-display font-bold text-xl text-neon">{formatCurrency(total)}</span>
+                </div>
+
+                <button
+                  onClick={handleCheckout}
+                  disabled={submitting || cart.length === 0}
+                  className="btn-primary w-full justify-center py-2.5 text-sm"
                 >
-                  {m}
+                  {submitting ? 'Printing...' : `Collect Payment (${formatCurrency(total)})`}
                 </button>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-grayMid">Ask manager for refund permission</span>
+                  <button
+                    type="button"
+                    onClick={() => setRefundModalOpen(true)}
+                    className="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1"
+                  >
+                    <Plus size={12} /> New Request
+                  </button>
+                </div>
 
-            {/* Total */}
-            <div className="border-t border-border pt-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-grayMid">Total Billing</span>
-              <span className="font-display font-bold text-xl text-neon">{formatCurrency(total)}</span>
-            </div>
-
-            <button
-              onClick={handleCheckout}
-              disabled={submitting || cart.length === 0}
-              className="btn-primary w-full justify-center py-2.5 text-sm"
-            >
-              {submitting ? 'Printing...' : `Collect Payment (${formatCurrency(total)})`}
-            </button>
+                {/* List of active requests */}
+                <div className="space-y-2 max-h-72 overflow-y-auto scrollbar-thin">
+                  {refunds.length === 0 ? (
+                    <div className="text-center py-12 text-gray text-xs">
+                      <RefreshCcw size={20} className="mx-auto mb-2 text-grayLight animate-spin-slow" />
+                      No active refund requests in this shop.
+                    </div>
+                  ) : (
+                    refunds.map((refund) => (
+                      <div key={refund.id} className="p-3 bg-bg rounded-xl border border-border space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-navy text-sm">{refund.id}</span>
+                          <span className="text-red-500 font-bold text-sm">-{formatCurrency(refund.amount)}</span>
+                        </div>
+                        <p className="text-xs text-grayMid">{refund.items}</p>
+                        <div className="flex items-center justify-between mt-1 text-[10px]">
+                          <span className="text-grayLight">Requested by {refund.cashier}</span>
+                          <span className="flex items-center gap-1 text-amber-600 font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Pending Approval
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -698,6 +824,77 @@ function CloseShiftModal({ isOpen, onClose, shiftTime, salesCount, salesTotal })
             </button>
             <button type="submit" disabled={submitting} className="btn-danger flex-1 justify-center py-2 text-xs font-semibold">
               {submitting ? 'Compiling...' : 'Confirm & Close'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// REQUEST REFUND MODAL
+function RequestRefundModal({ isOpen, onClose, onSubmit }) {
+  const [amount, setAmount] = useState('');
+  const [items, setItems] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    if (!items.trim()) {
+      toast.error('Please specify the items to refund');
+      return;
+    }
+    onSubmit(parsedAmount, items.trim());
+    setAmount('');
+    setItems('');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-navyDeep/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl border border-border w-full max-w-md p-6 relative">
+        <h3 className="text-lg font-display font-bold text-navy mb-1 flex items-center gap-2">
+          <RefreshCcw className="text-neon animate-spin-slow" size={18} /> Request Refund Approval
+        </h3>
+        <p className="text-xs text-grayMid mb-4">Send a real-time request to the shop manager for verification.</p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-navy mb-1 font-display">Refund Amount (₹)</label>
+            <input
+              type="number"
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="e.g. 45"
+              className="input-base text-sm font-semibold"
+              step="0.01"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-navy mb-1 font-display">Items / Reason</label>
+            <textarea
+              required
+              value={items}
+              onChange={(e) => setItems(e.target.value)}
+              placeholder="e.g. Aroma Perfume Oil x1 (Expired packaging)"
+              className="input-base text-sm min-h-[80px] py-2"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center py-2 text-xs">
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary flex-1 justify-center py-2 text-xs font-semibold">
+              Submit Request
             </button>
           </div>
         </form>

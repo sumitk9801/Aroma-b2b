@@ -10,7 +10,8 @@ import {
   setSelected, clearSelected,
   selectUsers, selectUsersLoading, selectUserSelected,
 } from '../../store/slices/usersSlice';
-import { selectActiveShopId, selectActiveShopName } from '../../store/slices/uiSlice';
+import { selectActiveShopId, selectActiveShopName, selectActiveShopRole } from '../../store/slices/uiSlice';
+import { selectUser } from '../../store/slices/authSlice';
 import DataTable from '../../components/ui/DataTable';
 import PageHeader from '../../components/ui/PageHeader';
 import Drawer from '../../components/ui/Drawer';
@@ -55,6 +56,12 @@ export default function UsersPage() {
   const selected   = useSelector(selectUserSelected);
   const activeShopId   = useSelector(selectActiveShopId);
   const activeShopName = useSelector(selectActiveShopName);
+  const user = useSelector(selectUser);
+  const activeShopRole = useSelector(selectActiveShopRole);
+
+  const userRole = (activeShopRole || user?.role || 'staff').toUpperCase();
+  const normalizedRole = userRole === 'STAFF' ? 'INVENTORY_STAFF' : userRole;
+  const isManager = normalizedRole === 'MANAGER';
 
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [deleteModal,  setDeleteModal]  = useState({ open: false, user: null });
@@ -193,26 +200,34 @@ export default function UsersPage() {
     },
     {
       key: 'actions', label: '',
-      render: (_, row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => openEdit(row)}
-            className="p-1.5 rounded-lg hover:bg-bg text-grayMid hover:text-navy transition-colors"
-            title="Edit staff member"
-          >
-            <Pencil size={14} />
-          </button>
-          {!row.isOwner && (
-            <button
-              onClick={() => setDeleteModal({ open: true, user: row })}
-              className="p-1.5 rounded-lg hover:bg-red-50 text-grayMid hover:text-red-600 transition-colors"
-              title="Remove from shop"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
-      ),
+      render: (_, row) => {
+        const isTargetAdmin = row.shopRole === 'admin' || row.role === 'admin';
+        const showEdit = !isManager || !isTargetAdmin;
+        const showDelete = !row.isOwner && (!isManager || !isTargetAdmin);
+        
+        return (
+          <div className="flex items-center gap-1">
+            {showEdit && (
+              <button
+                onClick={() => openEdit(row)}
+                className="p-1.5 rounded-lg hover:bg-bg text-grayMid hover:text-navy transition-colors"
+                title="Edit staff member"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+            {showDelete && (
+              <button
+                onClick={() => setDeleteModal({ open: true, user: row })}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-grayMid hover:text-red-600 transition-colors"
+                title="Remove from shop"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -347,7 +362,7 @@ export default function UsersPage() {
               Role <span className="text-red-500">*</span>
             </label>
             <select {...register('role')} className="input-base">
-              {STAFF_ROLES.map((r) => (
+              {STAFF_ROLES.filter(r => !isManager || r.value !== 'admin').map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
