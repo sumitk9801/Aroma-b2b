@@ -7,6 +7,8 @@ const { prisma } = require("../db/db");
  * @param {object} req - Express request object.
  */
 const resolveShopContext = async (req) => {
+    if (req.shopId) return req.shopId;
+    if (req.headers["x-shop-id"]) return req.headers["x-shop-id"];
     // If global admin, respect query shopId parameter (if supplied)
     if (req.user.role === "admin") {
         return req.query.shopId || null;

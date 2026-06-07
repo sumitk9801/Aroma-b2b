@@ -201,7 +201,7 @@ export default function UsersPage() {
     {
       key: 'actions', label: '',
       render: (_, row) => {
-        const isTargetAdmin = row.shopRole === 'admin' || row.role === 'admin';
+        const isTargetAdmin = row.shopRole?.toLowerCase() === 'admin' || row.role?.toLowerCase() === 'admin';
         const showEdit = !isManager || !isTargetAdmin;
         const showDelete = !row.isOwner && (!isManager || !isTargetAdmin);
         

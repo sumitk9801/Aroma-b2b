@@ -2,7 +2,12 @@ const stockMovementService = require("../services/stockMovementService");
 
 const getStockMovements = async (req, res) => {
     try {
-        const movements = await stockMovementService.getAllStockMovements();
+        const finalShopId = req.shopId || req.query.shopId;
+        const filters = {
+            referenceType: req.query.referenceType,
+            type: req.query.type,
+        };
+        const movements = await stockMovementService.getAllStockMovements(finalShopId, filters);
         res.status(200).json({ success: true, data: movements });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

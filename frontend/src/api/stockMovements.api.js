@@ -5,7 +5,7 @@ export const stockMovementsApi = {
     apiClient.get('/stock-movements', { params }),
 
   getReceivings: (params = {}) =>
-    apiClient.get('/stock-movements', { params: { ...params, referenceType: 'receiving' } }),
+    apiClient.get('/stock-movements', { params: { ...params, referenceType: 'receiving', type: 'addition' } }),
 
   adjust: (data) =>
     apiClient.post('/stock-movements/adjust', data),

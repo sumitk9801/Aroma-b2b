@@ -43,7 +43,8 @@ export default function Sidebar() {
       return true;
     }
     if (normalizedRole === 'MANAGER') {
-      return label !== 'Reports' && label !== 'Shops';
+      // Managers can see everything except Shops
+      return label !== 'Shops';
     }
     if (normalizedRole === 'CASHIER') {
       return label === 'Dashboard' || label === 'Sales';
@@ -58,6 +59,7 @@ export default function Sidebar() {
     }
     return false;
   });
+
 
   const isActive = (path) => location.pathname === path;
   const isParentActive = (item) =>

@@ -12,6 +12,9 @@ import {
   BarChart3,
   Users,
   ClipboardList,
+  UserCircle,
+  Factory,
+  Skull,
 } from 'lucide-react';
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
@@ -30,12 +33,15 @@ export const NAV_ITEMS = [
       { label: 'Stock Receiving', icon: Truck,             path: '/inventory/receiving' },
     ],
   },
-  { label: 'Sales',      icon: ShoppingCart, path: '/sales' },
-  { label: 'Purchases',  icon: Truck,        path: '/purchases' },
-  { label: 'Categories', icon: Grid3X3,      path: '/categories' },
-  { label: 'Shops',      icon: Store,        path: '/shops' },
-  { label: 'Reports',    icon: BarChart3,    path: '/reports' },
-  { label: 'Users',      icon: Users,        path: '/users', adminOnly: true },
+  { label: 'Sales',          icon: ShoppingCart, path: '/sales' },
+  { label: 'Purchases',      icon: Truck,        path: '/purchases' },
+  { label: 'Customers',      icon: UserCircle,   path: '/customers' },
+  { label: 'Suppliers',      icon: Factory,      path: '/suppliers' },
+  { label: 'Damaged Stock',  icon: Skull,        path: '/damaged-stock' },
+  { label: 'Categories',     icon: Grid3X3,      path: '/categories' },
+  { label: 'Shops',          icon: Store,        path: '/shops' },
+  { label: 'Reports',        icon: BarChart3,    path: '/reports' },
+  { label: 'Users',          icon: Users,        path: '/users', adminOnly: false },
 ];
 
 // ─── Payment Methods ──────────────────────────────────────────────────────────

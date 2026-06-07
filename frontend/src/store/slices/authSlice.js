@@ -39,6 +39,13 @@ export const logoutUser = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('shift_start_')) {
+          localStorage.removeItem(key);
+          i--;
+        }
+      }
       await authApi.logout();
     } catch {
       // Silently fail — still clear local state
@@ -77,6 +84,13 @@ const authSlice = createSlice({
       state.error = null;
     },
     clearAuth: (state) => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('shift_start_')) {
+          localStorage.removeItem(key);
+          i--;
+        }
+      }
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
@@ -121,6 +135,13 @@ const authSlice = createSlice({
         s.isAuthenticated = true;
       })
       .addCase(fetchCurrentUser.rejected, (s) => {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('shift_start_')) {
+            localStorage.removeItem(key);
+            i--;
+          }
+        }
         s.loading = false;
         s.user = null;
         s.token = null;

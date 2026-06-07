@@ -127,9 +127,12 @@ export default function NewStockReceivingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-navy mb-1.5">Supplier Name</label>
+              <label htmlFor="supplierName" className="block text-sm font-medium text-navy mb-1.5">Supplier Name</label>
               <input
+                id="supplierName"
+                name="supplierName"
                 type="text"
+                autoComplete="off"
                 value={supplierName}
                 onChange={(e) => setSupplierName(e.target.value)}
                 placeholder="e.g. Raj Traders, Mumbai Distributors..."
@@ -137,9 +140,12 @@ export default function NewStockReceivingPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-navy mb-1.5">Delivery Note / GRN No.</label>
+              <label htmlFor="deliveryNote" className="block text-sm font-medium text-navy mb-1.5">Delivery Note / GRN No.</label>
               <input
+                id="deliveryNote"
+                name="deliveryNote"
                 type="text"
+                autoComplete="off"
                 value={deliveryNote}
                 onChange={(e) => setDeliveryNote(e.target.value)}
                 placeholder="e.g. DN-2024-001, GRN-456..."

@@ -6,6 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { fetchProducts, selectProducts } from '../../store/slices/productsSlice';
 import { createPurchase } from '../../store/slices/purchasesSlice';
 import { fetchShops, selectShops } from '../../store/slices/shopsSlice';
+import { fetchSuppliers, selectSuppliers } from '../../store/slices/suppliersSlice';
 import { formatCurrency } from '../../utils/formatters';
 import { toast } from 'sonner';
 import { cn } from '../../utils/cn';
@@ -17,7 +18,9 @@ export default function NewPurchasePage() {
   const navigate = useNavigate();
   const products = useSelector(selectProducts);
   const shops = useSelector(selectShops);
+  const suppliers = useSelector(selectSuppliers);
 
+  const [supplierId, setSupplierId] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [shopId, setShopId] = useState('');
   const [rows, setRows] = useState([{ productId: '', quantity: 1, purchasePrice: 0 }]);
@@ -31,6 +34,12 @@ export default function NewPurchasePage() {
   useEffect(() => {
     if (shops.length === 1) setShopId(shops[0].id);
   }, [shops]);
+
+  useEffect(() => {
+    if (shopId) {
+      dispatch(fetchSuppliers({ shopId }));
+    }
+  }, [dispatch, shopId]);
 
   const addRow = () => setRows((r) => [...r, { productId: '', quantity: 1, purchasePrice: 0 }]);
 
@@ -59,6 +68,7 @@ export default function NewPurchasePage() {
     setSubmitting(true);
     const payload = {
       shopId,
+      supplierId: supplierId || undefined,
       supplierName: supplierName || undefined,
       items: validRows.map(({ productId, quantity, purchasePrice }) => ({
         productId, quantity: Number(quantity), purchasePrice: Number(purchasePrice),
@@ -82,7 +92,23 @@ export default function NewPurchasePage() {
       <h1 className="font-display font-bold text-2xl text-navy">New Purchase</h1>
 
       <div className="card space-y-5">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1.5">Select Registered Supplier</label>
+            <select
+              value={supplierId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSupplierId(id);
+                const selectedSup = suppliers.find((s) => s.id === id);
+                setSupplierName(selectedSup ? selectedSup.name : '');
+              }}
+              className="input-base"
+            >
+              <option value="">Select supplier...</option>
+              {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-navy mb-1.5">Supplier Name</label>
             <input
@@ -91,6 +117,7 @@ export default function NewPurchasePage() {
               onChange={(e) => setSupplierName(e.target.value)}
               placeholder="e.g. ABC Wholesale"
               className="input-base"
+              disabled={!!supplierId}
             />
           </div>
           <div>

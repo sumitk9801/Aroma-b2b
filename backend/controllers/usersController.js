@@ -100,7 +100,7 @@ const updateUser = async (req, res) => {
 
         // Enforce role-based limits for Managers
         if (req.user.shopRole === "MANAGER") {
-            if (targetStaff.role === "admin") {
+            if (targetStaff.role.toLowerCase() === "admin") {
                 return res.status(403).json({ success: false, message: "Forbidden: Managers cannot modify admin accounts" });
             }
             if (req.body.role && req.body.role.toLowerCase() === "admin") {
@@ -162,7 +162,7 @@ const deleteUser = async (req, res) => {
 
         // Enforce role-based limits for Managers
         if (req.user.shopRole === "MANAGER") {
-            if (targetStaff.role === "admin") {
+            if (targetStaff.role.toLowerCase() === "admin") {
                 return res.status(403).json({ success: false, message: "Forbidden: Managers cannot remove admin staff" });
             }
         }

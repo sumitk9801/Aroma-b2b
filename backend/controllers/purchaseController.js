@@ -11,7 +11,8 @@ const createPurchase = async (req, res) => {
 
 const getPurchases = async (req, res) => {
     try {
-        const purchases = await purchaseService.getAllPurchases();
+        const finalShopId = req.shopId || req.query.shopId;
+        const purchases = await purchaseService.getAllPurchases(finalShopId);
         res.status(200).json({ success: true, data: purchases });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

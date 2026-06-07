@@ -23,6 +23,7 @@ model User {
   shopStaff           ShopStaff[]
   productRequests     ProductRequest[]   @relation("UserProductRequests")
   productReviews      ProductRequest[]   @relation("UserProductReviews")
+  damageReports       DamagedStock[]     @relation("UserDamageReports")
 }
 
 model BlackList {
@@ -49,6 +50,12 @@ model Shop {
   stockAdjustments StockMovement[]
   staff            ShopStaff[]
   productRequests  ProductRequest[]
+  customers        Customer[]
+  suppliers        Supplier[]
+  damagedStock     DamagedStock[]
+  dailyMetrics     DailyShopMetrics[]
+  dailyProductPerf DailyProductPerformance[]
+  refunds          Refund[]
 }
 
 model ShopStaff {
@@ -97,11 +104,116 @@ model Product {
   saleItems        SaleItem[]
   stockAdjustments StockMovement[]
   productRequests  ProductRequest[]
+  damagedStock     DamagedStock[]
+  dailyPerformance DailyProductPerformance[]
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Customer — tracks B2B clients for purchase history & analysis
+// ─────────────────────────────────────────────────────────────────
+model Customer {
+  id        String   @id @default(uuid())
+  shopId    String
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  sales     Sale[]
+
+  @@index([shopId])
+  @@index([shopId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Supplier — tracks vendors for purchase history & spend analysis
+// ─────────────────────────────────────────────────────────────────
+model Supplier {
+  id        String     @id @default(uuid())
+  shopId    String
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  shop      Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
+
+  @@index([shopId])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DamagedStock — dedicated damage/write-off event log
+// ─────────────────────────────────────────────────────────────────
+model DamagedStock {
+  id          String   @id @default(uuid())
+  shopId      String
+  productId   String
+  quantity    Float
+  reason      String?
+  valueLost   Float    @default(0.00)
+  reportedBy  String
+  createdAt   DateTime @default(now())
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  reporter    User     @relation("UserDamageReports", fields: [reportedBy], references: [id])
+
+  @@index([shopId, createdAt])
+  @@index([productId])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DailyShopMetrics — nightly precomputed store KPIs (AI-ready)
+// ─────────────────────────────────────────────────────────────────
+model DailyShopMetrics {
+  id               String   @id @default(uuid())
+  shopId           String
+  date             DateTime
+  totalSalesCount  Int      @default(0)
+  totalRevenue     Float    @default(0.00)
+  costOfGoodsSold  Float    @default(0.00)
+  netProfit        Float    @default(0.00)
+  grossMargin      Float    @default(0.00)
+  totalPurchases   Int      @default(0)
+  purchaseExpenses Float    @default(0.00)
+  totalDamageValue Float    @default(0.00)
+  newCustomers     Int      @default(0)
+  createdAt        DateTime @default(now())
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, date])
+  @@index([shopId, date])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DailyProductPerformance — per-product daily sales (AI forecasting)
+// ─────────────────────────────────────────────────────────────────
+model DailyProductPerformance {
+  id           String   @id @default(uuid())
+  productId    String
+  shopId       String
+  date         DateTime
+  quantitySold Float    @default(0.00)
+  revenue      Float    @default(0.00)
+  unitsSold    Int      @default(0)
+  createdAt    DateTime @default(now())
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, date])
+  @@index([productId, date])
+  @@index([shopId, date])
 }
 
 model Purchase {
   id           String         @id @default(uuid())
   shopId       String
+  supplierId   String?
   supplierName String?
   totalAmount  Float          @default(0.00)
   createdBy    String
@@ -109,7 +221,10 @@ model Purchase {
   updatedAt    DateTime       @updatedAt
   creator      User           @relation("UserPurchases", fields: [createdBy], references: [id], onDelete: Cascade)
   shop         Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  supplier     Supplier?      @relation(fields: [supplierId], references: [id])
   items        PurchaseItem[]
+
+  @@index([shopId, createdAt])
 }
 
 model PurchaseItem {
@@ -126,6 +241,7 @@ model PurchaseItem {
 model Sale {
   id            String     @id @default(uuid())
   shopId        String
+  customerId    String?
   customerName  String?
   totalAmount   Float      @default(0.00)
   paymentMethod String?
@@ -134,7 +250,12 @@ model Sale {
   updatedAt     DateTime   @updatedAt
   creator       User       @relation("UserSales", fields: [createdBy], references: [id], onDelete: Cascade)
   shop          Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer      Customer?  @relation(fields: [customerId], references: [id])
   items         SaleItem[]
+
+  @@index([shopId, createdAt])
+  @@index([createdBy, createdAt])
+  @@index([customerId])
 }
 
 model SaleItem {
@@ -152,7 +273,7 @@ model StockMovement {
   id            String   @id @default(uuid())
   shopId        String
   productId     String
-  type          String
+  type          String   // addition | reduction | damage | return | adjustment
   quantity      Float
   previousStock Float
   newStock      Float
@@ -164,6 +285,10 @@ model StockMovement {
   creator       User     @relation("UserStockMovements", fields: [createdBy], references: [id], onDelete: Cascade)
   product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+  @@index([productId, createdAt])
+  @@index([type, shopId])
 }
 
 model RefreshToken {
@@ -198,3 +323,19 @@ model ProductRequest {
   reviewer       User?     @relation("UserProductReviews",  fields: [reviewedBy],  references: [id])
   product        Product?  @relation(fields: [productId],   references: [id])
 }
+
+model Refund {
+  id          String   @id @default(uuid())
+  refundCode  Int      @unique @default(autoincrement())
+  shopId      String
+  cashierName String
+  amount      Float
+  items       String
+  status      String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+}
+

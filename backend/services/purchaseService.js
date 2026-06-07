@@ -1,7 +1,7 @@
 const { prisma } = require("../db/db");
 
 const createPurchase = async (purchaseData, userId) => {
-    const { shopId, supplierName, items } = purchaseData;
+    const { shopId, supplierId, supplierName, items } = purchaseData;
     if (!items || items.length === 0) {
         throw new Error("Purchase items are required");
     }
@@ -22,11 +22,23 @@ const createPurchase = async (purchaseData, userId) => {
             });
         }
 
+        // If supplierId is provided but supplierName is not, resolve it from DB
+        let resolvedSupplierName = supplierName;
+        if (supplierId && !resolvedSupplierName) {
+            const supplier = await tx.supplier.findUnique({
+                where: { id: supplierId }
+            });
+            if (supplier) {
+                resolvedSupplierName = supplier.name;
+            }
+        }
+
         // Create purchase record
         const purchase = await tx.purchase.create({
             data: {
                 shopId,
-                supplierName,
+                supplierId: supplierId || null,
+                supplierName: resolvedSupplierName,
                 totalAmount,
                 createdBy: userId,
                 items: { create: itemsData }
@@ -66,8 +78,10 @@ const createPurchase = async (purchaseData, userId) => {
     });
 };
 
-const getAllPurchases = async () => {
+const getAllPurchases = async (shopId) => {
+    const where = shopId ? { shopId } : {};
     return await prisma.purchase.findMany({
+        where,
         include: {
             items: { include: { product: { select: { id: true, name: true, skuCode: true } } } },
             creator: { select: { id: true, name: true } },

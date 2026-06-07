@@ -13,7 +13,7 @@ const validate = require("../middleware/validate");
 const { createSaleSchema, getByIdSchema, getByProductSchema } = require("../middleware/validationSchemas");
 
 router.post("/", auth, checkShopContext, allowRoles("ADMIN", "MANAGER", "CASHIER"), validate(createSaleSchema), createSale);
-router.get("/", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), getSales);
+router.get("/", auth, checkShopContext, allowRoles("ADMIN", "MANAGER", "CASHIER"), getSales);
 router.get("/daily", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), getDailySales);
 router.get("/monthly", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), getMonthlySales);
 router.get("/product/:productId", auth, checkShopContext, allowRoles("ADMIN", "MANAGER"), validate(getByProductSchema), getSalesByProduct);

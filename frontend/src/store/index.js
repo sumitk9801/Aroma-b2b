@@ -11,6 +11,9 @@ import reportsReducer from './slices/reportsSlice';
 import stockMovementsReducer from './slices/stockMovementsSlice';
 import uiReducer from './slices/uiSlice';
 import productRequestsReducer from './slices/productRequestsSlice';
+import customersReducer from './slices/customersSlice';
+import suppliersReducer from './slices/suppliersSlice';
+import damagedStockReducer from './slices/damagedStockSlice';
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +29,9 @@ export const store = configureStore({
     stockMovements: stockMovementsReducer,
     ui: uiReducer,
     productRequests: productRequestsReducer,
+    customers: customersReducer,
+    suppliers: suppliersReducer,
+    damagedStock: damagedStockReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

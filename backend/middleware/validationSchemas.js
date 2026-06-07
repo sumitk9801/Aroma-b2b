@@ -114,6 +114,7 @@ const updateProductSchema = z.object({
 const createPurchaseSchema = z.object({
     body: z.object({
         shopId: z.string().uuid("Invalid shop ID format"),
+        supplierId: z.string().uuid("Invalid supplier ID format").optional().nullable(),
         supplierName: z.string().optional(),
         items: z.array(z.object({
             productId: z.string().uuid("Invalid product ID format"),

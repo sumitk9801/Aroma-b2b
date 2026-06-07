@@ -30,8 +30,13 @@ const createProduct = async (productData) => {
     return mapProduct(product);
 };
 
-const getAllProducts = async () => {
+const getAllProducts = async (shopId) => {
+    const where = {};
+    if (shopId) {
+        where.shopId = shopId;
+    }
     const products = await prisma.product.findMany({
+        where,
         include: {
             shop: { select: { id: true, shopName: true } },
             categoryRef: { select: { id: true, name: true } }
@@ -40,7 +45,7 @@ const getAllProducts = async () => {
     return products.map(mapProduct);
 };
 
-const getProductById = async (id) => {
+const getProductById = async (id, shopId) => {
     const product = await prisma.product.findUnique({
         where: { id },
         include: {
@@ -48,13 +53,17 @@ const getProductById = async (id) => {
             categoryRef: { select: { id: true, name: true } }
         }
     });
-    if (!product) {
+    if (!product || (shopId && product.shopId !== shopId)) {
         throw new Error("Product not found");
     }
     return mapProduct(product);
 };
 
-const updateProduct = async (id, updateData) => {
+const updateProduct = async (id, updateData, shopId) => {
+    const productExists = await prisma.product.findUnique({ where: { id } });
+    if (!productExists || (shopId && productExists.shopId !== shopId)) {
+        throw new Error("Product not found");
+    }
     const { name, description, skuCode, barcodes, image, imageUrl, purchasePrice, sellingPrice, currentStock, minimumStock, isActive } = updateData;
     const finalImage = image !== undefined ? image : (imageUrl !== undefined ? imageUrl : undefined);
     const product = await prisma.product.update({
@@ -75,28 +84,41 @@ const updateProduct = async (id, updateData) => {
     return mapProduct(product);
 };
 
-const deleteProduct = async (id) => {
+const deleteProduct = async (id, shopId) => {
+    const productExists = await prisma.product.findUnique({ where: { id } });
+    if (!productExists || (shopId && productExists.shopId !== shopId)) {
+        throw new Error("Product not found");
+    }
     return await prisma.product.delete({ where: { id } });
 };
 
-const getLowStockProducts = async () => {
+const getLowStockProducts = async (shopId) => {
+    const where = {};
+    if (shopId) {
+        where.shopId = shopId;
+    }
     const products = await prisma.product.findMany({
+        where,
         include: { shop: { select: { id: true, shopName: true } } }
     });
     return products.filter(p => p.currentStock <= p.minimumStock).map(mapProduct);
 };
 
-const searchProducts = async (searchTerm) => {
+const searchProducts = async (searchTerm, shopId) => {
     if (!searchTerm) return [];
+    const where = {
+        OR: [
+            { name: { contains: searchTerm, mode: "insensitive" } },
+            { description: { contains: searchTerm, mode: "insensitive" } },
+            { barcodes: { contains: searchTerm, mode: "insensitive" } },
+            { skuCode: { contains: searchTerm, mode: "insensitive" } }
+        ]
+    };
+    if (shopId) {
+        where.shopId = shopId;
+    }
     const products = await prisma.product.findMany({
-        where: {
-            OR: [
-                { name: { contains: searchTerm, mode: "insensitive" } },
-                { description: { contains: searchTerm, mode: "insensitive" } },
-                { barcodes: { contains: searchTerm, mode: "insensitive" } },
-                { skuCode: { contains: searchTerm, mode: "insensitive" } }
-            ]
-        },
+        where,
         include: {
             shop: { select: { id: true, shopName: true } },
             categoryRef: { select: { id: true, name: true } }

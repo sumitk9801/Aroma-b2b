@@ -1,7 +1,11 @@
 const { prisma } = require("../db/db");
 
-const getAllStockMovements = async () => {
+const getAllStockMovements = async (shopId, filters = {}) => {
+    const where = shopId ? { shopId } : {};
+    if (filters.referenceType) where.referenceType = filters.referenceType;
+    if (filters.type) where.type = filters.type;
     return await prisma.stockMovement.findMany({
+        where,
         include: {
             product: { select: { id: true, name: true, skuCode: true } },
             shop: { select: { id: true, shopName: true } },

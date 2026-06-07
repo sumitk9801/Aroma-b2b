@@ -13,6 +13,37 @@ const pageVariants = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
+const parseDetailedNote = (detailedNote) => {
+  if (!detailedNote) return { supplier: '—', userNote: '—' };
+  
+  let supplier = '—';
+  let userNote = '—';
+  
+  const noteSeparator = '. Note:';
+  const separatorIndex = detailedNote.indexOf(noteSeparator);
+  if (separatorIndex !== -1) {
+    userNote = detailedNote.substring(separatorIndex + noteSeparator.length).trim() || '—';
+    const supplierPart = detailedNote.substring(0, separatorIndex);
+    const supplierPrefix = 'from supplier:';
+    const supplierPrefixIndex = supplierPart.indexOf(supplierPrefix);
+    if (supplierPrefixIndex !== -1) {
+      supplier = supplierPart.substring(supplierPrefixIndex + supplierPrefix.length).trim() || '—';
+    }
+  } else {
+    const supplierPrefix = 'from supplier:';
+    const supplierPrefixIndex = detailedNote.indexOf(supplierPrefix);
+    if (supplierPrefixIndex !== -1) {
+      let temp = detailedNote.substring(supplierPrefixIndex + supplierPrefix.length).trim();
+      if (temp.endsWith('.')) {
+        temp = temp.slice(0, -1);
+      }
+      supplier = temp.trim() || '—';
+    }
+  }
+  
+  return { supplier, userNote };
+};
+
 export default function StockReceivingPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -56,6 +87,14 @@ export default function StockReceivingPage() {
       ),
     },
     {
+      key: 'supplier',
+      label: 'Supplier',
+      render: (_, row) => {
+        const { supplier } = parseDetailedNote(row.note);
+        return <span className="text-sm text-navy">{supplier}</span>;
+      },
+    },
+    {
       key: 'previousStock',
       label: 'Previous Stock',
       render: (v) => <span className="text-grayMid text-sm">{v ?? '—'}</span>,
@@ -74,10 +113,15 @@ export default function StockReceivingPage() {
     },
     {
       key: 'note',
-      label: 'Details',
-      render: (v) => (
-        <span className="text-xs text-grayMid max-w-[200px] truncate block" title={v}>{v || '—'}</span>
-      ),
+      label: 'Note',
+      render: (v) => {
+        const { userNote } = parseDetailedNote(v);
+        return (
+          <span className="text-xs text-grayMid max-w-[200px] truncate block" title={userNote}>
+            {userNote}
+          </span>
+        );
+      },
     },
     {
       key: 'creator',

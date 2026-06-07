@@ -349,11 +349,304 @@ const getFastMovingProducts = async (shopId, limit = 5) => {
     });
 };
 
+/**
+ * Sales summary with explicit start and end date (any custom range).
+ * Enables cashiers and managers to check any specific day or month.
+ */
+const getSalesByDateRange = async (shopId, startDate, endDate) => {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const where = { createdAt: { gte: start, lte: end } };
+    if (shopId) where.shopId = shopId;
+
+    const refundWhere = {
+        status: "APPROVED",
+        createdAt: { gte: start, lte: end }
+    };
+    if (shopId) refundWhere.shopId = shopId;
+
+    const [summary, salesList, refundsList] = await Promise.all([
+        prisma.sale.aggregate({
+            where,
+            _count: { id: true },
+            _sum: { totalAmount: true }
+        }),
+        prisma.sale.findMany({
+            where,
+            include: {
+                items: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                name: true,
+                                skuCode: true,
+                                purchasePrice: true,
+                                sellingPrice: true,
+                                categoryId: true,
+                                categoryRef: { select: { id: true, name: true } }
+                            }
+                        }
+                    }
+                },
+                creator: { select: { id: true, name: true, role: true } },
+                customer: { select: { id: true, name: true, phone: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        }),
+        prisma.refund.findMany({
+            where: refundWhere,
+            orderBy: { createdAt: 'desc' }
+        })
+    ]);
+
+    const totalSales = summary._count.id || 0;
+    const totalRevenue = summary._sum.totalAmount || 0;
+
+    return {
+        totalSales,
+        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+        averageOrderValue: totalSales > 0 ? parseFloat((totalRevenue / totalSales).toFixed(2)) : 0,
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+        transactions: salesList,
+        refunds: refundsList
+    };
+};
+
+/**
+ * Get all transactions created by a specific user (cashier's own history).
+ * Accessible by cashier, manager, and admin.
+ */
+const getTransactionsByUser = async (userId, shopId, startDate, endDate) => {
+    const where = { createdBy: userId };
+    if (shopId) where.shopId = shopId;
+    if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) { const s = new Date(startDate); s.setHours(0,0,0,0); where.createdAt.gte = s; }
+        if (endDate) { const e = new Date(endDate); e.setHours(23,59,59,999); where.createdAt.lte = e; }
+    }
+
+    const [sales, aggregate] = await Promise.all([
+        prisma.sale.findMany({
+            where,
+            include: {
+                items: { include: { product: { select: { id: true, name: true, skuCode: true } } } },
+                customer: { select: { id: true, name: true } },
+                shop: { select: { id: true, shopName: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        }),
+        prisma.sale.aggregate({
+            where,
+            _count: { id: true },
+            _sum: { totalAmount: true }
+        })
+    ]);
+
+    return {
+        userId,
+        totalTransactions: aggregate._count.id || 0,
+        totalRevenue: parseFloat((aggregate._sum.totalAmount || 0).toFixed(2)),
+        transactions: sales
+    };
+};
+
+/**
+ * How often products are ordered (from PurchaseItems) in a date range.
+ * Shows which products are ordered most / least from suppliers.
+ */
+const getProductOrderFrequency = async (shopId, startDate, endDate) => {
+    const where = shopId ? { purchase: { shopId } } : {};
+    if (startDate || endDate) {
+        where.purchase = { ...(where.purchase || {}), createdAt: {} };
+        if (startDate) { const s = new Date(startDate); s.setHours(0,0,0,0); where.purchase.createdAt.gte = s; }
+        if (endDate) { const e = new Date(endDate); e.setHours(23,59,59,999); where.purchase.createdAt.lte = e; }
+    }
+
+    const aggregations = await prisma.purchaseItem.groupBy({
+        by: ['productId'],
+        where,
+        _count: { id: true },
+        _sum: { quantity: true, subtotal: true },
+        orderBy: { _sum: { quantity: 'desc' } }
+    });
+
+    if (!aggregations.length) return [];
+
+    const productIds = aggregations.map(a => a.productId);
+    const products = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, name: true, skuCode: true, currentStock: true }
+    });
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    return aggregations.map((agg, idx) => {
+        const product = productMap.get(agg.productId);
+        return {
+            rank: idx + 1,
+            productId: agg.productId,
+            name: product ? product.name : 'Unknown',
+            skuCode: product ? product.skuCode : 'N/A',
+            currentStock: product ? product.currentStock : 0,
+            orderCount: agg._count.id,
+            totalQuantityOrdered: agg._sum.quantity || 0,
+            totalSpent: parseFloat((agg._sum.subtotal || 0).toFixed(2))
+        };
+    });
+};
+
+/**
+ * Top customers by spend — requires Customer model to be linked to sales.
+ */
+const getTopCustomers = async (shopId, limit = 10) => {
+    const customers = await prisma.customer.findMany({
+        where: { shopId },
+        include: {
+            _count: { select: { sales: true } },
+            sales: { select: { totalAmount: true, createdAt: true } }
+        }
+    });
+
+    return customers
+        .map(c => ({
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+            email: c.email,
+            totalPurchases: c._count.sales,
+            totalSpent: parseFloat(c.sales.reduce((acc, s) => acc + s.totalAmount, 0).toFixed(2)),
+            lastPurchase: c.sales.length > 0 ? c.sales.sort((a,b) => b.createdAt - a.createdAt)[0].createdAt : null
+        }))
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, limit);
+};
+
+/**
+ * Inventory Turnover Ratio = Total COGS / Average Inventory Cost.
+ * Industry-standard KPI — higher is better.
+ */
+const getInventoryTurnover = async (shopId) => {
+    const whereClause = shopId ? { shopId } : {};
+
+    const saleItems = await prisma.saleItem.findMany({
+        where: shopId ? { sale: { shopId } } : {},
+        select: { quantity: true, productId: true, product: { select: { purchasePrice: true } } }
+    });
+
+    let cogs = 0;
+    for (const item of saleItems) {
+        cogs += item.quantity * (item.product?.purchasePrice || 0);
+    }
+
+    const products = await prisma.product.findMany({
+        where: { ...whereClause, isActive: true },
+        select: { currentStock: true, purchasePrice: true }
+    });
+
+    const inventoryValue = products.reduce((acc, p) => acc + p.currentStock * p.purchasePrice, 0);
+    const turnoverRatio = inventoryValue > 0 ? parseFloat((cogs / inventoryValue).toFixed(2)) : 0;
+    // Days Inventory Outstanding — how many days stock lasts
+    const dio = turnoverRatio > 0 ? parseFloat((365 / turnoverRatio).toFixed(1)) : 0;
+
+    return {
+        cogs: parseFloat(cogs.toFixed(2)),
+        currentInventoryValue: parseFloat(inventoryValue.toFixed(2)),
+        inventoryTurnoverRatio: turnoverRatio,
+        daysInventoryOutstanding: dio,
+        interpretation: turnoverRatio >= 6 ? 'Excellent' : turnoverRatio >= 4 ? 'Good' : turnoverRatio >= 2 ? 'Average' : 'Low — consider promotions'
+    };
+};
+
+/**
+ * Stock restocked (received) movements — shows what was resupplied and when.
+ */
+const getStockRestoredSummary = async (shopId, startDate, endDate) => {
+    const where = { type: { in: ['addition', 'receiving'] } };
+    if (shopId) where.shopId = shopId;
+    if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) { const s = new Date(startDate); s.setHours(0,0,0,0); where.createdAt.gte = s; }
+        if (endDate) { const e = new Date(endDate); e.setHours(23,59,59,999); where.createdAt.lte = e; }
+    }
+
+    const movements = await prisma.stockMovement.findMany({
+        where,
+        include: {
+            product: { select: { id: true, name: true, skuCode: true } },
+            creator: { select: { id: true, name: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
+    const totalQuantityRestored = movements.reduce((acc, m) => acc + m.quantity, 0);
+    return { totalRestockEvents: movements.length, totalQuantityRestored, movements };
+};
+
+/**
+ * Month-over-month revenue comparison — last 12 months.
+ * AI-ready sequential data for trend detection.
+ */
+const getMonthlyComparison = async (shopId) => {
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+    const where = { createdAt: { gte: twelveMonthsAgo } };
+    if (shopId) where.shopId = shopId;
+
+    const sales = await prisma.sale.findMany({
+        where,
+        select: { createdAt: true, totalAmount: true }
+    });
+
+    const monthMap = {};
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const key = d.toISOString().substring(0, 7);
+        monthMap[key] = { month: key, revenue: 0, salesCount: 0 };
+    }
+
+    for (const sale of sales) {
+        const key = sale.createdAt.toISOString().substring(0, 7);
+        if (monthMap[key]) {
+            monthMap[key].revenue += sale.totalAmount;
+            monthMap[key].salesCount += 1;
+        }
+    }
+
+    const months = Object.values(monthMap).map(m => ({
+        ...m,
+        revenue: parseFloat(m.revenue.toFixed(2))
+    }));
+
+    // Calculate MoM % change
+    for (let i = 1; i < months.length; i++) {
+        const prev = months[i - 1].revenue;
+        const curr = months[i].revenue;
+        months[i].momChange = prev > 0 ? parseFloat(((curr - prev) / prev * 100).toFixed(1)) : null;
+    }
+
+    return months;
+};
+
 module.exports = {
     getSalesSummary,
     getPurchaseSummary,
     getProfitSummary,
     getStockValuation,
     getDeadStock,
-    getFastMovingProducts
+    getFastMovingProducts,
+    getSalesByDateRange,
+    getTransactionsByUser,
+    getProductOrderFrequency,
+    getTopCustomers,
+    getInventoryTurnover,
+    getStockRestoredSummary,
+    getMonthlyComparison
 };

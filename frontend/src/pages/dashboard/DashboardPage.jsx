@@ -14,11 +14,12 @@ import {
   selectDashboardSummary, selectDashboardRecentSales, selectDashboardTopProducts,
   selectDashboardLowStock, selectDashboardSalesChart, selectDashboardLoading,
 } from '../../store/slices/dashboardSlice';
-import { selectUser } from '../../store/slices/authSlice';
+import { selectUser, logoutUser } from '../../store/slices/authSlice';
 import { selectActiveShopId, selectActiveShopRole, selectActiveShopName } from '../../store/slices/uiSlice';
 import { fetchProducts, selectProducts } from '../../store/slices/productsSlice';
 import { adjustStock, fetchStockMovements, selectStockMovements } from '../../store/slices/stockMovementsSlice';
-import { createSale } from '../../store/slices/salesSlice';
+import { createSale, fetchSales, selectSales } from '../../store/slices/salesSlice';
+import { fetchUsers, selectUsers } from '../../store/slices/usersSlice';
 import StatCard from '../../components/ui/StatCard';
 import SalesAreaChart from '../../components/charts/SalesAreaChart';
 import TopProductsChart from '../../components/charts/TopProductsChart';
@@ -27,6 +28,22 @@ import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import { formatCurrency, formatDate, formatDateOnly } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
 import { toast } from 'sonner';
+
+const formatRelativeTime = (d) => {
+  if (!d) return '—';
+  const date = typeof d === 'string' ? new Date(d) : d;
+  const now = new Date();
+  const diffMs = now - date;
+  if (diffMs < 0) return 'Just now';
+  const diffSecs = Math.floor(diffMs / 1000);
+  if (diffSecs < 60) return 'Just now';
+  const diffMins = Math.floor(diffSecs / 60);
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+};
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -53,10 +70,16 @@ export default function DashboardPage() {
         dispatch(fetchTopProducts());
         dispatch(fetchDashboardLowStock());
         dispatch(fetchSalesChart());
+        dispatch(fetchStockMovements());
+        dispatch(fetchUsers({ shopId: activeShopId }));
+        dispatch(fetchSales({ shopId: activeShopId }));
       }
       if (normalizedRole === 'INVENTORY_STAFF' || normalizedRole === 'CASHIER') {
         dispatch(fetchProducts());
         dispatch(fetchStockMovements());
+      }
+      if (normalizedRole === 'CASHIER') {
+        dispatch(fetchSales({ shopId: activeShopId }));
       }
     }
   }, [dispatch, activeShopId, normalizedRole]);
@@ -85,13 +108,33 @@ function AdminDashboard({ activeShopName }) {
   const salesChart = useSelector(selectDashboardSalesChart);
   const loading = useSelector(selectDashboardLoading);
 
-  const mockAuditLogs = [
-    { id: 1, action: 'Stock adjustment', details: 'Added 10 units of Aroma Coffee Blend', user: 'Sarah Miller', time: '10 mins ago' },
-    { id: 2, action: 'New cashier shift', details: 'Shift started with float $100.00', user: 'Alex Wong', time: '35 mins ago' },
-    { id: 3, action: 'Price updated', details: 'Aroma Perfume Oil price updated to $45.00', user: 'Sumit Khandelwal', time: '1 hour ago' },
-    { id: 4, action: 'Role changed', details: 'User Rahul set as MANAGER', user: 'System Admin', time: '3 hours ago' },
-    { id: 5, action: 'Supplier order received', details: 'Intake order #2038 processed', user: 'John Doe', time: '5 hours ago' },
-  ];
+  const movements = useSelector(selectStockMovements);
+  const navigate = useNavigate();
+
+  const auditLogs = useMemo(() => {
+    return (movements || []).slice(0, 5).map((m) => {
+      let action = 'Stock adjustment';
+      let details = m.note || `${m.type === 'addition' ? 'Added' : 'Reduced'} ${m.quantity} units of ${m.product?.name || 'unknown'}`;
+      
+      if (m.referenceType === 'sale') {
+        action = 'Checkout sale recorded';
+      } else if (m.referenceType === 'purchase') {
+        action = 'Supplier order received';
+      } else if (m.referenceType === 'damage') {
+        action = 'Damaged inventory reported';
+      } else if (m.referenceType === 'receiving') {
+        action = 'Stock received';
+      }
+      
+      return {
+        id: m.id,
+        action,
+        details,
+        user: m.creator?.name || 'System Admin',
+        time: formatRelativeTime(m.createdAt),
+      };
+    });
+  }, [movements]);
 
   const statCards = [
     { icon: <Package />, title: 'Total Products', value: summary?.totalProducts ?? '—', subtitle: 'In current shop', accent: 'neon' },
@@ -171,21 +214,25 @@ function AdminDashboard({ activeShopName }) {
               <h3 className="font-display font-semibold text-navy">Shop Audit Logs</h3>
             </div>
             <div className="space-y-4">
-              {mockAuditLogs.map((log) => (
-                <div key={log.id} className="flex items-start justify-between text-xs gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-navy truncate">{log.action}</p>
-                    <p className="text-grayMid text-[11px] truncate">{log.details}</p>
+              {auditLogs.length === 0 ? (
+                <p className="text-center text-grayMid text-xs py-8">No recent audit logs available</p>
+              ) : (
+                auditLogs.map((log) => (
+                  <div key={log.id} className="flex items-start justify-between text-xs gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-navy truncate">{log.action}</p>
+                      <p className="text-grayMid text-[11px] truncate">{log.details}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-navyDeep font-medium">{log.user}</p>
+                      <p className="text-grayLight text-[10px]">{log.time}</p>
+                    </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-navyDeep font-medium">{log.user}</p>
-                    <p className="text-grayLight text-[10px]">{log.time}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
-          <button className="btn-secondary w-full justify-center text-xs mt-4 py-2">
+          <button onClick={() => navigate('/inventory/movements')} className="btn-secondary w-full justify-center text-xs mt-4 py-2">
             View Full Audit History
           </button>
         </div>
@@ -224,30 +271,94 @@ function ManagerDashboard({ activeShopId, activeShopName }) {
   const summary = useSelector(selectDashboardSummary);
   const loading = useSelector(selectDashboardLoading);
   const lowStock = useSelector(selectDashboardLowStock);
+  const users = useSelector(selectUsers);
+  const sales = useSelector(selectSales);
 
   const [refunds, setRefunds] = useState([]);
+  const [socket, setSocket] = useState(getSocket());
 
   useEffect(() => {
-    const socket = getSocket();
+    if (socket) return;
+    const interval = setInterval(() => {
+      const s = getSocket();
+      if (s) {
+        setSocket(s);
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [socket]);
+
+  useEffect(() => {
     if (!socket) return;
 
-    socket.on('refund-list-update', (updatedList) => {
+    const handleUpdate = (updatedList) => {
       setRefunds(updatedList);
-    });
+    };
 
-    // Request initial list sync
+    socket.on('refund-list-update', handleUpdate);
     socket.emit('join-shop', activeShopId);
 
     return () => {
-      socket.off('refund-list-update');
+      socket.off('refund-list-update', handleUpdate);
     };
-  }, [activeShopId]);
+  }, [socket, activeShopId]);
 
-  const activeCashiers = [
-    { id: 1, name: 'Sarah Miller', shift: '2h 15m', sales: '$240.00', status: 'active' },
-    { id: 2, name: 'Alex Wong', shift: '4h 50m', sales: '$490.00', status: 'break' },
-    { id: 3, name: 'Emma Watson', shift: '0h 40m', sales: '$45.00', status: 'active' },
-  ];
+  const todaySales = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return (sales || []).filter((s) => new Date(s.createdAt) >= startOfToday);
+  }, [sales]);
+
+  const drawerCashBalance = useMemo(() => {
+    return todaySales.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
+  }, [todaySales]);
+
+  const cashiersList = useMemo(() => {
+    const staffMembers = (users || []).filter(u => u.shopRole?.toLowerCase() === 'cashier' || todaySales.some(s => s.createdBy === u.id));
+    
+    return staffMembers.map((member) => {
+      const memberSales = todaySales.filter((s) => s.createdBy === member.id);
+      const totalSalesAmt = memberSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+      
+      let status = 'offline';
+      let lastActiveText = 'No sales today';
+      
+      if (memberSales.length > 0) {
+        const sortedSales = [...memberSales].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const lastSaleTime = new Date(sortedSales[0].createdAt);
+        const timeDiffMin = Math.floor((new Date() - lastSaleTime) / 60000);
+        
+        if (timeDiffMin < 60) {
+          status = 'active';
+          lastActiveText = `Last sale: ${timeDiffMin} min${timeDiffMin !== 1 ? 's' : ''} ago`;
+        } else if (timeDiffMin < 240) {
+          status = 'break';
+          lastActiveText = `Last sale: ${Math.floor(timeDiffMin / 60)}h ago`;
+        } else {
+          status = 'offline';
+          lastActiveText = `Last sale: ${Math.floor(timeDiffMin / 60)}h ago`;
+        }
+      }
+      
+      return {
+        id: member.id,
+        name: member.name,
+        salesCount: memberSales.length,
+        salesTotal: formatCurrency(totalSalesAmt),
+        status,
+        lastActiveText
+      };
+    });
+  }, [users, todaySales]);
+
+  const activeCount = cashiersList.filter(c => c.status === 'active').length;
+  const cashierStatValue = `${cashiersList.length} Register${cashiersList.length !== 1 ? 's' : ''}`;
+  const cashierStatSubtitle = `${activeCount} active, ${cashiersList.length - activeCount} offline/idle`;
+
+  const targetAmount = 15000; // Let's set a target of ₹15,000
+  const totalRevenueToday = summary?.totalRevenueToday || 0;
+  const targetPercentage = Math.min(100, Math.round((totalRevenueToday / targetAmount) * 100));
 
   const handleRefund = (id, approved) => {
     const socket = getSocket();
@@ -261,8 +372,8 @@ function ManagerDashboard({ activeShopId, activeShopName }) {
   };
 
   const statCards = [
-    { icon: <DollarSign />, title: 'Drawer Cash Balance', value: '$840.00', subtitle: 'Sum of all active cashiers', accent: 'neon' },
-    { icon: <Activity />, title: 'Active Cashiers', value: '3 Registers', subtitle: '2 active, 1 on break', accent: 'neon' },
+    { icon: <DollarSign />, title: 'Drawer Cash Balance', value: formatCurrency(drawerCashBalance), subtitle: 'Sum of all active cashiers', accent: 'neon' },
+    { icon: <Activity />, title: 'Active Cashiers', value: cashierStatValue, subtitle: cashierStatSubtitle, accent: 'neon' },
     { icon: <AlertTriangle />, title: 'Stock Exceptions', value: lowStock.length, subtitle: 'Below threshold limits', accent: lowStock.length > 0 ? 'red' : 'neon' },
   ];
 
@@ -284,15 +395,15 @@ function ManagerDashboard({ activeShopId, activeShopName }) {
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="40" stroke="rgba(125, 173, 63, 0.1)" strokeWidth="8" fill="transparent" />
                   <circle cx="50" cy="50" r="40" stroke="#7dad3f" strokeWidth="8" fill="transparent"
-                    strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * 72) / 100} strokeLinecap="round" />
+                    strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * targetPercentage) / 100} strokeLinecap="round" />
                 </svg>
                 <div className="absolute text-center">
-                  <p className="text-2xl font-bold text-navy">72%</p>
+                  <p className="text-2xl font-bold text-navy">{targetPercentage}%</p>
                   <p className="text-[10px] text-grayMid uppercase tracking-wide">Achieved</p>
                 </div>
               </div>
               <p className="text-sm font-semibold text-navy mt-4">
-                $1,080.00 <span className="text-grayLight font-normal">/ $1,500.00 target</span>
+                {formatCurrency(totalRevenueToday)} <span className="text-grayLight font-normal">/ {formatCurrency(targetAmount)} target</span>
               </p>
             </div>
           </div>
@@ -308,21 +419,28 @@ function ManagerDashboard({ activeShopId, activeShopName }) {
             <h3 className="font-display font-semibold text-navy">Cashier Supervision</h3>
           </div>
           <div className="space-y-4">
-            {activeCashiers.map((cashier) => (
-              <div key={cashier.id} className="flex items-center justify-between border-b border-border pb-3 last:border-b-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <span className={cn('w-2.5 h-2.5 rounded-full', cashier.status === 'active' ? 'bg-neon animate-pulse' : 'bg-amber-500')} />
-                  <div>
-                    <p className="text-sm font-semibold text-navy">{cashier.name}</p>
-                    <p className="text-xs text-grayLight">Shift Duration: {cashier.shift}</p>
+            {cashiersList.length === 0 ? (
+              <p className="text-center text-grayMid text-xs py-8">No cashier registers active</p>
+            ) : (
+              cashiersList.map((cashier) => (
+                <div key={cashier.id} className="flex items-center justify-between border-b border-border pb-3 last:border-b-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      'w-2.5 h-2.5 rounded-full', 
+                      cashier.status === 'active' ? 'bg-neon animate-pulse' : cashier.status === 'break' ? 'bg-amber-500' : 'bg-gray-400'
+                    )} />
+                    <div>
+                      <p className="text-sm font-semibold text-navy">{cashier.name}</p>
+                      <p className="text-xs text-grayLight">{cashier.lastActiveText}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-navy">{cashier.salesTotal}</p>
+                    <p className="text-xs text-grayLight uppercase tracking-wider">{cashier.salesCount} sale{cashier.salesCount !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-navy">{cashier.sales}</p>
-                  <p className="text-xs text-grayLight uppercase tracking-wider">{cashier.status}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -350,7 +468,7 @@ function ManagerDashboard({ activeShopId, activeShopName }) {
                       <span className="text-red-500 font-bold text-sm">-{formatCurrency(refund.amount)}</span>
                     </div>
                     <p className="text-xs text-grayMid">{refund.items}</p>
-                    <p className="text-[10px] text-grayLight">Submitted by {refund.cashier} • {refund.date}</p>
+                    <p className="text-[10px] text-grayLight">Submitted by {refund.cashier} • {formatRelativeTime(refund.date)}</p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => handleRefund(refund.id, false)} className="p-1.5 rounded-lg border border-red-200 text-red-500 bg-white hover:bg-red-50 transition-colors">
@@ -409,12 +527,52 @@ function CashierDashboard({ activeShopId, activeShopName }) {
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [refunds, setRefunds] = useState([]);
 
-  // Shift Mocks
-  const [shiftStart] = useState(new Date());
+  const sales = useSelector(selectSales);
+
+  // Shift timer and stats
+  const [shiftStart, setShiftStart] = useState(() => {
+    const key = user?.id ? `shift_start_${user.id}` : 'shift_start_temp';
+    const stored = localStorage.getItem(key);
+    if (stored) return new Date(stored);
+    const now = new Date();
+    localStorage.setItem(key, now.toISOString());
+    return now;
+  });
+
+  // Sync temp key to user-specific key once user.id is loaded (in case user.id is initially null)
+  useEffect(() => {
+    if (user?.id) {
+      const key = `shift_start_${user.id}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        setShiftStart(new Date(stored));
+      } else {
+        const tempKey = 'shift_start_temp';
+        const tempStored = localStorage.getItem(tempKey);
+        const startVal = tempStored ? new Date(tempStored) : new Date();
+        localStorage.setItem(key, startVal.toISOString());
+        localStorage.removeItem(tempKey);
+        setShiftStart(startVal);
+      }
+    }
+  }, [user?.id]);
+
   const [shiftTime, setShiftTime] = useState('00:00:00');
-  const [salesCount, setSalesCount] = useState(3);
-  const [salesTotal, setSalesTotal] = useState(185.50);
+  const [salesCount, setSalesCount] = useState(0);
+  const [salesTotal, setSalesTotal] = useState(0);
   const [closeShiftModal, setCloseShiftModal] = useState(false);
+
+  // Calculate today's sales for this cashier shift
+  useEffect(() => {
+    if (user?.id) {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const userSalesToday = (sales || []).filter((s) => s.createdBy === user.id && new Date(s.createdAt) >= startOfToday);
+      const totalAmount = userSalesToday.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+      setSalesCount(userSalesToday.length);
+      setSalesTotal(totalAmount);
+    }
+  }, [sales, user?.id]);
 
   // Shift Timer Counter
   useEffect(() => {
@@ -429,21 +587,34 @@ function CashierDashboard({ activeShopId, activeShopName }) {
   }, [shiftStart]);
 
   // Sync refunds list
+  const [socket, setSocket] = useState(getSocket());
+
   useEffect(() => {
-    const socket = getSocket();
+    if (socket) return;
+    const interval = setInterval(() => {
+      const s = getSocket();
+      if (s) {
+        setSocket(s);
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [socket]);
+
+  useEffect(() => {
     if (!socket) return;
 
-    socket.on('refund-list-update', (updatedList) => {
+    const handleUpdate = (updatedList) => {
       setRefunds(updatedList);
-    });
+    };
 
-    // Request initial list sync
+    socket.on('refund-list-update', handleUpdate);
     socket.emit('join-shop', activeShopId);
 
     return () => {
-      socket.off('refund-list-update');
+      socket.off('refund-list-update', handleUpdate);
     };
-  }, [activeShopId]);
+  }, [socket, activeShopId]);
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery) return products.slice(0, 15);
@@ -500,8 +671,7 @@ function CashierDashboard({ activeShopId, activeShopName }) {
     setSubmitting(false);
     if (createSale.fulfilled.match(result)) {
       toast.success('Invoice Created & Printed! ✓');
-      setSalesCount(prev => prev + 1);
-      setSalesTotal(prev => prev + total);
+      dispatch(fetchSales({ shopId: activeShopId }));
       setCart([]);
       setCustomerName('');
     } else {
@@ -735,7 +905,7 @@ function CashierDashboard({ activeShopId, activeShopName }) {
                         </div>
                         <p className="text-xs text-grayMid">{refund.items}</p>
                         <div className="flex items-center justify-between mt-1 text-[10px]">
-                          <span className="text-grayLight">Requested by {refund.cashier}</span>
+                          <span className="text-grayLight">Requested by {refund.cashier} • {formatRelativeTime(refund.date)}</span>
                           <span className="flex items-center gap-1 text-amber-600 font-semibold">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             Pending Approval
@@ -753,6 +923,9 @@ function CashierDashboard({ activeShopId, activeShopName }) {
 
       {/* Close Shift Modal */}
       <CloseShiftModal isOpen={closeShiftModal} onClose={() => setCloseShiftModal(false)} shiftTime={shiftTime} salesCount={salesCount} salesTotal={salesTotal} />
+
+      {/* Request Refund Modal */}
+      <RequestRefundModal isOpen={refundModalOpen} onClose={() => setRefundModalOpen(false)} onSubmit={handleRequestRefund} />
     </motion.div>
   );
 }
@@ -760,6 +933,8 @@ function CashierDashboard({ activeShopId, activeShopName }) {
 // MOCK SHIFT CLOSE MODAL
 function CloseShiftModal({ isOpen, onClose, shiftTime, salesCount, salesTotal }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const user = useSelector(selectUser);
   const [drawerCash, setDrawerCash] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -768,12 +943,19 @@ function CloseShiftModal({ isOpen, onClose, shiftTime, salesCount, salesTotal })
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       setSubmitting(false);
-      toast.success('Shift closed successfully! Float reports compiled.');
+      if (user?.id) {
+        localStorage.removeItem(`shift_start_${user.id}`);
+      }
+      localStorage.removeItem('shift_start_temp');
+      
+      // Dispatch logout to clear state and tokens
+      await dispatch(logoutUser());
+      
+      toast.success(`Shift closed successfully! Actual Cash: ₹${drawerCash}. Logged out.`);
       onClose();
-      // Force reload page to log them out or clear shift stats
-      window.location.reload();
+      navigate('/login');
     }, 1000);
   };
 
@@ -806,7 +988,7 @@ function CloseShiftModal({ isOpen, onClose, shiftTime, salesCount, salesTotal })
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-navy mb-1">Actual Cash in Drawer ($)</label>
+            <label className="block text-xs font-semibold text-navy mb-1">Actual Cash in Drawer (₹)</label>
             <input
               type="number"
               required

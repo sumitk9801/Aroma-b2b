@@ -88,8 +88,8 @@ export default function SaleDetailPage() {
                     <td className="px-4 py-3 font-medium text-navy">{item.product?.name || item.productName || '—'}</td>
                     <td className="px-4 py-3 text-grayMid text-xs">{item.product?.skuCode || '—'}</td>
                     <td className="px-4 py-3 font-semibold">{item.quantity}</td>
-                    <td className="px-4 py-3">{formatCurrency(item.unitPrice || 0)}</td>
-                    <td className="px-4 py-3 font-semibold">{formatCurrency((item.unitPrice || 0) * (item.quantity || 1))}</td>
+                    <td className="px-4 py-3">{formatCurrency(item.sellingPrice || item.unitPrice || 0)}</td>
+                    <td className="px-4 py-3 font-semibold">{formatCurrency(item.subtotal || (item.sellingPrice || item.unitPrice || 0) * (item.quantity || 1))}</td>
                   </tr>
                 ))}
               </tbody>

@@ -21,12 +21,15 @@ const dashboardRoute = require("./routes/dashboardRoute");
 const uploadsRoute = require("./routes/uploadsRoute");
 const healthRoute = require("./routes/healthRoute");
 const productRequestRoute = require("./routes/productRequestRoute");
+const customersRoute = require("./routes/customersRoute");
+const suppliersRoute = require("./routes/suppliersRoute");
+const damagedStockRoute = require("./routes/damagedStockRoute");
 
 
 // Rate limiters to protect DB and server resources
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 10000, // Limit each IP to 10000 requests per windowMs (high limit for development/B2B usage)
     message: {
         success: false,
         message: "Too many requests, please try again after 15 minutes"
@@ -37,7 +40,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Strict limit for auth/login/register to prevent brute-force attacks
+    max: 10000, // Limit each IP to 10000 requests per windowMs (high limit for development/B2B usage)
     message: {
         success: false,
         message: "Too many authentication requests, please try again after 15 minutes"
@@ -92,6 +95,9 @@ app.use("/api/v1/stock-movements", stockMovementsRoute);
 app.use("/api/v1/reports", reportsRoute);
 app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/uploads", uploadsRoute);
+app.use("/api/v1/customers", customersRoute);
+app.use("/api/v1/suppliers", suppliersRoute);
+app.use("/api/v1/damaged-stock", damagedStockRoute);
 app.use("/health", healthRoute);
 
 // Mount the global error formatting middleware as the final interceptor in the Express stack

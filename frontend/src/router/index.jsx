@@ -41,16 +41,21 @@ const ShopsPage              = lazy(() => import('../pages/shops/ShopsPage'));
 const ReportsPage            = lazy(() => import('../pages/reports/ReportsPage'));
 const UsersPage              = lazy(() => import('../pages/users/UsersPage'));
 
+// ─── New Analytics Pages ──────────────────────────────────────────────────────
+const CustomersPage          = lazy(() => import('../pages/customers/CustomersPage'));
+const SuppliersPage          = lazy(() => import('../pages/suppliers/SuppliersPage'));
+const DamagedStockPage       = lazy(() => import('../pages/damaged-stock/DamagedStockPage'));
+
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
-          {/* ── Public ─────────────────────────────────────────────────────── */}
+          {/* Public */}
           <Route path="/login"    element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* ── Protected (must be logged in) ──────────────────────────────── */}
+          {/* Protected */}
           <Route element={<ProtectedRoute />}>
             <Route path="/select-shop" element={<SelectShopPage />} />
 
@@ -58,7 +63,7 @@ export default function AppRouter() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
 
-              {/* ── All inventory & warehouse roles ─────────────────────────── */}
+              {/* All inventory & warehouse roles */}
               <Route element={<RoleRoute allow={['ADMIN', 'MANAGER', 'INVENTORY_STAFF']} />}>
                 <Route path="/products"              element={<ProductsPage />} />
                 <Route path="/products/requests"     element={<ProductRequestsPage />} />
@@ -71,30 +76,33 @@ export default function AppRouter() {
                 <Route path="/categories"            element={<CategoriesPage />} />
               </Route>
 
-              {/* ── Sales roles: Admin, Manager, Cashier ───────────────────── */}
+              {/* Sales roles: Admin, Manager, Cashier */}
               <Route element={<RoleRoute allow={['ADMIN', 'MANAGER', 'CASHIER']} />}>
                 <Route path="/sales"     element={<SalesPage />} />
                 <Route path="/sales/new" element={<NewSalePage />} />
                 <Route path="/sales/:id" element={<SaleDetailPage />} />
               </Route>
 
-              {/* ── Admin + Manager only ─────────────────────────────────────  */}
+              {/* Admin + Manager only */}
               <Route element={<AdminRoute />}>
                 <Route path="/users"          element={<UsersPage />} />
                 <Route path="/purchases"      element={<PurchasesPage />} />
                 <Route path="/purchases/new"  element={<NewPurchasePage />} />
                 <Route path="/purchases/:id"  element={<PurchaseDetailPage />} />
+                <Route path="/customers"      element={<CustomersPage />} />
+                <Route path="/suppliers"      element={<SuppliersPage />} />
+                <Route path="/damaged-stock"  element={<DamagedStockPage />} />
+                <Route path="/reports"        element={<ReportsPage />} />
               </Route>
 
-              {/* ── Admin only ───────────────────────────────────────────────  */}
+              {/* Admin only */}
               <Route element={<AdminOnlyRoute />}>
-                <Route path="/shops"   element={<ShopsPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/shops" element={<ShopsPage />} />
               </Route>
             </Route>
           </Route>
 
-          {/* ── Catch-all ──────────────────────────────────────────────────── */}
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
