@@ -21,7 +21,7 @@ A production-grade, high-performance Node.js & Express.js backend engineered for
 ## Directory Structure
 
 ```text
-aroma-b2b/
+backend/
 ├── server.js                  # Starts the HTTP listener
 ├── app.js                    # Configures Express middlewares, rate limits, and routers
 ├── config/
