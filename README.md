@@ -123,4 +123,5 @@ To run the full stack locally, configure both folders by following these instruc
    ```
    *Vite will start the application on `http://localhost:5173` (or the next available port).*
 
+
 ---
