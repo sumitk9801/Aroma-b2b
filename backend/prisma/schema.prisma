@@ -53,9 +53,12 @@ model Shop {
   customers        Customer[]
   suppliers        Supplier[]
   damagedStock     DamagedStock[]
-  dailyMetrics     DailyShopMetrics[]
-  dailyProductPerf DailyProductPerformance[]
-  refunds          Refund[]
+  dailyMetrics          DailyShopMetrics[]
+  dailyProductPerf      DailyProductPerformance[]
+  refunds               Refund[]
+  externalSignals       ExternalSignal[]
+  signalAdjustedMetrics DailySignalAdjustedMetrics[]
+  productTrendScores    ProductTrendScore[]
 }
 
 model ShopStaff {
@@ -106,6 +109,7 @@ model Product {
   productRequests  ProductRequest[]
   damagedStock     DamagedStock[]
   dailyPerformance DailyProductPerformance[]
+  trendScores      ProductTrendScore[]
 }
 
 // ─────────────────────────────────────────────────────────────────
