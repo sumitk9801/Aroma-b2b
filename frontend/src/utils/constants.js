@@ -15,6 +15,7 @@ import {
   UserCircle,
   Factory,
   Skull,
+  Sparkles,
 } from 'lucide-react';
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
@@ -41,6 +42,7 @@ export const NAV_ITEMS = [
   { label: 'Categories',     icon: Grid3X3,      path: '/categories' },
   { label: 'Shops',          icon: Store,        path: '/shops' },
   { label: 'Reports',        icon: BarChart3,    path: '/reports' },
+  { label: 'AI Intelligence', icon: Sparkles,    path: '/intelligence' },
   { label: 'Users',          icon: Users,        path: '/users', adminOnly: false },
 ];
 

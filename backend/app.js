@@ -25,6 +25,15 @@ const customersRoute = require("./routes/customersRoute");
 const suppliersRoute = require("./routes/suppliersRoute");
 const damagedStockRoute = require("./routes/damagedStockRoute");
 
+// ── V2 Intelligence & AI Routes ───────────────────────────────────────────────
+const v2ForecastRoute        = require("./routes/v2/forecast.routes");
+const v2IntelligenceRoute    = require("./routes/v2/intelligence.routes");
+const v2RecommendationsRoute = require("./routes/v2/recommendations.routes");
+const v2SignalsRoute         = require("./routes/v2/signals.routes");
+const v2TrendsRoute          = require("./routes/v2/trends.routes");
+const v2AssistantRoute       = require("./routes/v2/assistant.routes");
+
+
 
 // Rate limiters to protect DB and server resources
 const generalLimiter = rateLimit({
@@ -99,6 +108,16 @@ app.use("/api/v1/customers", customersRoute);
 app.use("/api/v1/suppliers", suppliersRoute);
 app.use("/api/v1/damaged-stock", damagedStockRoute);
 app.use("/health", healthRoute);
+
+// ── V2 Intelligence & AI Routes ───────────────────────────────────────────────
+// All new modules use /api/v2/ namespace — v1 routes are never modified.
+app.use("/api/v2/forecast",        v2ForecastRoute);
+app.use("/api/v2/intelligence",    v2IntelligenceRoute);
+app.use("/api/v2/recommendations", v2RecommendationsRoute);
+app.use("/api/v2/signals",         v2SignalsRoute);
+app.use("/api/v2/trends",          v2TrendsRoute);
+app.use("/api/v2/assistant",       v2AssistantRoute);
+
 
 // Mount the global error formatting middleware as the final interceptor in the Express stack
 const errorMiddleware = require("./middleware/errorMiddleware");
