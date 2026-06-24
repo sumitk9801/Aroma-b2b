@@ -4,13 +4,11 @@ const { Pool } = require('pg');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/aroma_b2b";
+const connectionString = process.env.DATABASE_URL;
 
-// Enable SSL configuration for Neon Postgres or if sslmode=require is present
-const isNeon = connectionString.includes("neon.tech") || connectionString.includes("sslmode=require");
 const pool = new Pool({
     connectionString,
-    ssl: isNeon ? { rejectUnauthorized: false } : false
+    ssl: { rejectUnauthorized: false }
 });
 
 const adapter = new PrismaPg(pool);
@@ -27,4 +25,3 @@ const connectdb = async () => {
 
 module.exports = connectdb;
 module.exports.prisma = prisma;
-

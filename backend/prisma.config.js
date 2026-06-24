@@ -1,7 +1,9 @@
-require('dotenv').config();
+require('dotenv/config');
+const { defineConfig, env } = require('prisma/config');
 
-module.exports = {
+module.exports = defineConfig({
+  schema: 'prisma/schema.prisma',
   datasource: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:epdpwEyuyMwmPfZeasukhtPBlbqDZzrW@zephyr.proxy.rlwy.net:36753/railway",
+    url: env('DATABASE_URL'),
   },
-};
+});
