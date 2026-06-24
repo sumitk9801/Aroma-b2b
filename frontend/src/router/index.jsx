@@ -45,6 +45,7 @@ const UsersPage              = lazy(() => import('../pages/users/UsersPage'));
 const CustomersPage          = lazy(() => import('../pages/customers/CustomersPage'));
 const SuppliersPage          = lazy(() => import('../pages/suppliers/SuppliersPage'));
 const DamagedStockPage       = lazy(() => import('../pages/damaged-stock/DamagedStockPage'));
+const AIIntelligenceHub      = lazy(() => import('../pages/intelligence/AIIntelligenceHub'));
 
 export default function AppRouter() {
   return (
@@ -93,6 +94,7 @@ export default function AppRouter() {
                 <Route path="/suppliers"      element={<SuppliersPage />} />
                 <Route path="/damaged-stock"  element={<DamagedStockPage />} />
                 <Route path="/reports"        element={<ReportsPage />} />
+                <Route path="/intelligence"   element={<AIIntelligenceHub />} />
               </Route>
 
               {/* Admin only */}

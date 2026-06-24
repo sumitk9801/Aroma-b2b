@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+
 }
 
 model User {
@@ -343,3 +344,67 @@ model Refund {
   @@index([shopId, createdAt])
 }
 
+
+
+// -----------------------------------------------------------------
+// V2.4 — ExternalSignal: normalized store for weather, festival,
+//         holiday, and local event signals fetched nightly.
+// -----------------------------------------------------------------
+model ExternalSignal {
+  id          String   @id @default(uuid())
+  shopId      String
+  date        DateTime
+  signalType  String   // "WEATHER" | "FESTIVAL" | "HOLIDAY" | "LOCAL_EVENT" | "SEASONAL"
+  signalName  String   // e.g. "Diwali" | "Monsoon" | "Republic Day"
+  intensity   Float    @default(1.0) // Demand multiplier (1.0 = neutral)
+  metadata    Json?    // Raw signal payload
+  source      String   // "OPENWEATHER" | "FESTIVAL_CALENDAR" | "MANUAL"
+  createdAt   DateTime @default(now())
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, date, signalType])
+  @@index([shopId, date])
+}
+
+// -----------------------------------------------------------------
+// V2.4 — DailySignalAdjustedMetrics: signal-weighted forecast
+//         overlay computed per shop per day.
+// -----------------------------------------------------------------
+model DailySignalAdjustedMetrics {
+  id              String   @id @default(uuid())
+  shopId          String
+  date            DateTime
+  baseRevenue     Float    @default(0.00) // From DailyShopMetrics
+  adjustedRevenue Float    @default(0.00) // Signal-weighted projection
+  signalFactors   Json?    // { "festival": 1.3, "weather": 0.9 }
+  confidenceScore Float    @default(0.0)  // 0.0-1.0
+  createdAt       DateTime @default(now())
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, date])
+  @@index([shopId, date])
+}
+
+// -----------------------------------------------------------------
+// V2.5 — ProductTrendScore: nightly velocity scoring for
+//         trend detection (rising, stable, declining, at-risk).
+// -----------------------------------------------------------------
+model ProductTrendScore {
+  id               String   @id @default(uuid())
+  productId        String
+  shopId           String
+  computedAt       DateTime @default(now())
+  trendScore       Float    @default(1.0)
+  trendLabel       String   @default("STABLE")
+  velocityLast7d   Float    @default(0.0)
+  velocityPrior14d Float    @default(0.0)
+  revenueVelocity  Float    @default(0.0)
+  opportunityScore Float    @default(0.0)
+  updatedAt        DateTime @updatedAt
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, shopId])
+  @@index([shopId, trendLabel])
+  @@index([shopId, opportunityScore])
+}

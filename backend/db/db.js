@@ -4,8 +4,13 @@ const { Pool } = require('pg');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/aroma_b2b";
-const pool = new Pool({ connectionString });
+const connectionString = process.env.DATABASE_URL;
+
+const pool = new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false }
+});
+
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -20,4 +25,3 @@ const connectdb = async () => {
 
 module.exports = connectdb;
 module.exports.prisma = prisma;
-
