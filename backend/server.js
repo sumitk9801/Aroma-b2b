@@ -12,9 +12,32 @@ const port = process.env.PORT || process.env.port || 3000;
 
 const server = http.createServer(app);
 
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://aroma-b2b.vercel.app"
+];
+
+if (process.env.ALLOWED_ORIGINS) {
+    const envOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+    envOrigins.forEach(o => {
+        if (!allowedOrigins.includes(o)) allowedOrigins.push(o);
+    });
+}
+
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", "http://localhost:5174"],
+        origin: function (origin, callback) {
+            if (!origin) return callback(null, true);
+            const isAllowed = allowedOrigins.includes(origin) || 
+                              origin.startsWith("http://localhost:") || 
+                              origin.endsWith(".vercel.app");
+            if (isAllowed) {
+                callback(null, true);
+            } else {
+                callback(null, false);
+            }
+        },
         credentials: true
     }
 });

@@ -67,8 +67,33 @@ app.use(cookieParser()); // Parse cookies from request headers
 app.use(express.json({ limit: "10kb" })); // Body parser with body payload size limit
 // app.use(xss()); // Sanitize request fields to protect DB against XSS injections
 app.use(hpp()); // Prevent HTTP Parameter Pollution
+// Build the list of allowed origins
+let allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://aroma-b2b.vercel.app"
+];
+
+if (process.env.ALLOWED_ORIGINS) {
+    const envOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+    allowedOrigins = [...new Set([...allowedOrigins, ...envOrigins])];
+}
+
 app.use(cors({ // allow cross origin requests and responses from different domains
-    origin: ["http://localhost:5173", "http://localhost:5174"],    
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, postman)
+        if (!origin) return callback(null, true);
+        
+        const isAllowed = allowedOrigins.includes(origin) || 
+                          origin.startsWith("http://localhost:") || 
+                          origin.endsWith(".vercel.app");
+                          
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            callback(null, false);
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'x-shop-id']
